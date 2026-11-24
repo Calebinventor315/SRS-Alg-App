@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Chinese SRS</title>
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+  <!-- Auth View -->
+  <section id="auth-view" class="auth-shell hidden">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="brand-mark">中文</div>
+        <h1 id="auth-title" class="auth-title">Sign in to Chinese SRS</h1>
+        <p id="auth-subtitle" class="auth-subtitle">Sync your decks and progress across any device.</p>
+      </div>
+
+      <div id="supabase-warning" class="auth-notice hidden">
+        <strong>Cloud sync not configured yet.</strong>
+        Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to <code>.env</code> and run <code>supabase/schema.sql</code> to enable online accounts.
+      </div>
+
+      <form id="auth-form" class="auth-form">
+        <div class="field">
+          <label for="auth-email">Email</label>
+          <input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+        </div>
+
+        <div class="field">
+          <label for="auth-password">Password</label>
+          <input id="auth-password" type="password" autocomplete="current-password" placeholder="••••••••" minlength="6" required />
+        </div>
+
+        <div id="auth-confirm-wrap" class="field hidden">
+          <label for="auth-confirm">Confirm Password</label>
+          <input id="auth-confirm" type="password" autocomplete="new-password" placeholder="••••••••" minlength="6" />
+        </div>
+
+        <div id="auth-error" class="auth-error" role="alert"></div>
+        <div id="auth-info" class="auth-info hidden" role="status"></div>
+
+        <button type="submit" id="auth-submit" class="btn btn-primary btn-full">Sign In</button>
+      </form>
+
+      <div class="auth-switch">
+        <button type="button" id="auth-toggle-mode" class="btn-link">Need an account? Create one</button>
+      </div>
+
+      <div class="auth-offline-wrap">
+        <button type="button" id="btn-offline-mode" class="btn btn-ghost btn-full">Continue Offline (Local Storage)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Home View (All Decks) -->
+  <main id="home-view" class="app-shell hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="brand-inline">
+          <span class="brand-mark brand-mark-sm">中文</span>
+          <span class="brand-name">Chinese SRS</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span id="home-sync-badge" class="sync-badge">Offline</span>
+        <span id="home-user-email" class="user-badge"></span>
+        <button type="button" id="btn-home-auth" class="btn btn-ghost">Sign Out</button>
+      </div>
+    </header>
+
+    <section class="home-hero">
+      <div class="home-hero-text">
+        <h1 class="home-title">Your Decks</h1>
+        <p class="home-subtitle">Pick a deck, choose forward or backwards (for pinyin), and study with flashcards or spelling.</p>
+      </div>
+
+      <div class="mode-bar">
+        <div class="segmented-group">
+          <span class="segmented-label">Direction</span>
+          <div class="segmented" role="group" aria-label="Study direction">
+            <button type="button" class="seg-btn" data-direction="forward">Pinyin → Hanzi</button>
+            <button type="button" class="seg-btn" data-direction="reverse">Hanzi → Pinyin</button>
+          </div>
+        </div>
+
+        <div class="segmented-group">
+          <span class="segmented-label">Mode</span>
+          <div class="segmented" role="group" aria-label="Study mode">
+            <button type="button" class="seg-btn" data-mode="flashcard">Flashcards</button>
+            <button type="button" class="seg-btn" data-mode="spelling">Spelling</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="deck-grid" class="deck-grid" aria-label="Decks"></section>
+  </main>
+
+  <!-- Study View -->
+  <main id="study-view" class="app-shell hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button type="button" id="btn-back-home" class="btn btn-ghost">← Decks</button>
+        <select id="deck-select" aria-label="Select deck" class="deck-select"></select>
+        <button type="button" id="btn-reset-deck" class="btn btn-ghost">Reset Deck</button>
+      </div>
+      <div class="topbar-right">
+        <div class="segmented segmented-compact" role="group" aria-label="Study direction">
+          <button type="button" class="seg-btn" data-direction="forward">Pinyin → Hanzi</button>
+          <button type="button" class="seg-btn" data-direction="reverse">Hanzi → Pinyin</button>
+        </div>
+        <div class="segmented segmented-compact" role="group" aria-label="Study mode">
+          <button type="button" class="seg-btn" data-mode="flashcard">Flashcards</button>
+          <button type="button" class="seg-btn" data-mode="spelling">Spelling</button>
+        </div>
+        <span id="study-sync-badge" class="sync-badge">Offline</span>
+        <button type="button" id="btn-study-auth" class="btn btn-ghost">Sign Out</button>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <div class="card-column">
+        <!-- Flashcard Mode -->
+        <div id="flashcard" class="flashcard" role="button" tabindex="0" aria-label="Flip card">
+          <div id="card-inner" class="card-inner">
+            <div class="card-face card-front">
+              <div id="front-direction-pill" class="direction-pill">Pinyin → Hanzi</div>
+              <div id="front-main" class="card-pinyin"></div>
+              <div id="front-sub" class="card-sub-front hidden"></div>
+              <span class="keycap card-keycap">Space</span>
+            </div>
+            <div class="card-face card-back">
+              <div id="back-main" class="card-hanzi"></div>
+              <div id="back-sub" class="card-english"></div>
+              <div id="back-extra" class="card-extra hidden"></div>
+              <span class="keycap keycap-dark card-keycap">Space</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Spelling Mode -->
+        <div id="spelling-panel" class="spelling-panel hidden">
+          <div class="spelling-prompt-area">
+            <div class="spelling-prompt-head">
+              <span id="spelling-direction-pill" class="direction-pill">Type Hanzi</span>
+              <button type="button" id="btn-spelling-hint" class="btn-link btn-hint hidden">Show English hint</button>
+            </div>
+            <div id="spelling-prompt-main" class="spelling-prompt-main"></div>
+            <div id="spelling-prompt-sub" class="spelling-prompt-sub hidden"></div>
+          </div>
+
+          <form id="spelling-form" class="spelling-form">
+            <input
+              id="spelling-input"
+              class="spelling-input"
+              type="text"
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+              placeholder="Type your answer…"
+            />
+            <button type="submit" id="btn-spelling-check" class="btn btn-primary spelling-submit">
+              Check <kbd class="keycap keycap-dark">Enter</kbd>
+            </button>
+          </form>
+
+          <div id="spelling-feedback" class="spelling-feedback hidden" aria-live="polite">
+            <div id="spelling-verdict" class="spelling-verdict"></div>
+            <div id="spelling-comparison" class="spelling-comparison"></div>
+            <div id="spelling-full-card" class="spelling-full-card"></div>
+            <div id="spelling-shortcut-hint" class="spelling-shortcut-hint"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-column">
+        <div class="action-grid">
+          <button type="button" id="btn-wrong" class="btn btn-wrong">
+            <span id="btn-wrong-label">Wrong</span> <kbd class="keycap">K</kbd>
+          </button>
+          <button type="button" id="btn-right" class="btn btn-right">
+            <span id="btn-right-label">Right</span> <kbd class="keycap keycap-dark">J</kbd>
+          </button>
+        </div>
+
+        <button type="button" id="btn-undo" class="btn btn-neutral btn-full" disabled>
+          Undo <kbd class="keycap">U</kbd>
+        </button>
+
+        <div class="slider-box">
+          <div class="slider-head">
+            <label for="multiplier-slider">Multiplier</label>
+            <span id="multiplier-value" class="slider-val">2.0×</span>
+          </div>
+          <input id="multiplier-slider" type="range" min="1.1" max="3" step="0.1" value="2" />
+          <div class="slider-scale">
+            <span>1.1×</span>
+            <span>2.0×</span>
+            <span>3.0×</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="queue-section" aria-label="Card queue">
+      <div id="queue-grid" class="queue-grid"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
