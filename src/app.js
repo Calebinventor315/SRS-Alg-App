@@ -648,7 +648,7 @@ function renderHome() {
           <div class="deck-card-footer">
             <span class="deck-next-preview">Up next: <strong>${escapeHtml(previewText)}</strong></span>
             <div class="deck-card-actions">
-              <button type="button" class="btn btn-ghost btn-xs" data-export-deck="${escapeHtml(id)}" title="Export as .zip">Export .zip</button>
+              <button type="button" class="btn btn-ghost btn-xs" data-export-deck="${escapeHtml(id)}" title="Export as .srsl">Export .srsl</button>
               ${
                 !deck.builtIn
                   ? `<button type="button" class="btn btn-ghost btn-xs" data-edit-deck="${escapeHtml(id)}">Edit</button>
@@ -686,7 +686,7 @@ function renderHome() {
       if (!deck) return;
       try {
         await exportDeckZip(deck);
-        showHomeToast(`Exported "${deck.title}" as ${deck.id}.zip`);
+        showHomeToast(`Exported "${deck.title}" as ${deck.id}.srsl`);
       } catch (err) {
         showHomeToast(err?.message || 'Failed to export deck.', true);
       }

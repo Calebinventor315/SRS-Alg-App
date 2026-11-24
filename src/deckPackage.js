@@ -29,9 +29,9 @@ export async function importDeckFile(file) {
     return { deck, audioCount: 0 };
   }
 
-  // ZIP package import
-  if (!lowerName.endsWith('.zip')) {
-    throw new Error('Please upload a .zip or .json deck file.');
+  // .srsl (SRS Learning zip package) or .zip package import
+  if (!lowerName.endsWith('.srsl') && !lowerName.endsWith('.zip')) {
+    throw new Error('Please upload a .srsl, .zip, or .json deck file.');
   }
 
   const zip = await JSZip.loadAsync(file);
@@ -128,7 +128,7 @@ export async function exportDeckZip(deck) {
   const url = URL.createObjectURL(content);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${deck.id || 'deck'}.zip`;
+  a.download = `${deck.id || 'deck'}.srsl`;
   document.body.appendChild(a);
   a.click();
   a.remove();
