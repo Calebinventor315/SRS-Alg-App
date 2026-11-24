@@ -22,9 +22,14 @@
       </div>
 
       <form id="auth-form" class="auth-form">
+        <div id="auth-username-wrap" class="field hidden">
+          <label for="auth-username">Username</label>
+          <input id="auth-username" type="text" autocomplete="username" placeholder="e.g. caleb315" minlength="3" maxlength="24" />
+        </div>
+
         <div class="field">
-          <label for="auth-email">Email</label>
-          <input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+          <label id="auth-identifier-label" for="auth-email">Email or Username</label>
+          <input id="auth-email" type="text" autocomplete="username" placeholder="you@example.com or username" required />
         </div>
 
         <div class="field">
@@ -42,6 +47,20 @@
 
         <button type="submit" id="auth-submit" class="btn btn-primary btn-full">Sign In</button>
       </form>
+
+      <div class="auth-divider"><span>or continue with</span></div>
+
+      <div class="oauth-grid">
+        <button type="button" class="btn btn-oauth" data-oauth="google">
+          <span class="oauth-icon">G</span> Google
+        </button>
+        <button type="button" class="btn btn-oauth" data-oauth="apple">
+          <span class="oauth-icon"></span> Apple
+        </button>
+        <button type="button" class="btn btn-oauth" data-oauth="azure">
+          <span class="oauth-icon">M</span> Microsoft
+        </button>
+      </div>
 
       <div class="auth-switch">
         <button type="button" id="auth-toggle-mode" class="btn-link">Need an account? Create one</button>

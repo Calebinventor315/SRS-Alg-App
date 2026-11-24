@@ -35,6 +35,9 @@ const authTitle = document.getElementById('auth-title');
 const authSubtitle = document.getElementById('auth-subtitle');
 const supabaseWarning = document.getElementById('supabase-warning');
 const authForm = document.getElementById('auth-form');
+const authUsernameWrap = document.getElementById('auth-username-wrap');
+const authUsername = document.getElementById('auth-username');
+const authIdentifierLabel = document.getElementById('auth-identifier-label');
 const authEmail = document.getElementById('auth-email');
 const authPassword = document.getElementById('auth-password');
 const authConfirmWrap = document.getElementById('auth-confirm-wrap');
@@ -177,7 +180,10 @@ function updateSegmentedControls() {
 
 function updateUserChrome() {
   const isLoggedIn = Boolean(currentUser);
-  homeUserEmail.textContent = isLoggedIn ? currentUser.email : 'Local mode';
+  const displayName = isLoggedIn
+    ? currentUser.user_metadata?.username || currentUser.email
+    : 'Local mode';
+  homeUserEmail.textContent = displayName;
   btnHomeAuth.textContent = isLoggedIn ? 'Sign Out' : 'Sign In';
   btnStudyAuth.textContent = isLoggedIn ? 'Sign Out' : 'Sign In';
 }
@@ -194,12 +200,20 @@ function renderAuthForm() {
   const isSignUp = authMode === 'signup';
   authTitle.textContent = isSignUp ? 'Create your account' : 'Sign in to Chinese SRS';
   authSubtitle.textContent = isSignUp
-    ? 'Save your decks and study progress online anywhere.'
-    : 'Sync your decks and progress across any device.';
+    ? 'Sign up with your email, username, and password.'
+    : 'Sign in with your email or username, or use a provider below.';
   authSubmit.textContent = isSignUp ? 'Create Account' : 'Sign In';
   authToggleMode.textContent = isSignUp
     ? 'Already have an account? Sign in'
     : 'Need an account? Create one';
+
+  authUsernameWrap.classList.toggle('hidden', !isSignUp);
+  authUsername.required = isSignUp;
+  authIdentifierLabel.textContent = isSignUp ? 'Email' : 'Email or Username';
+  authEmail.type = isSignUp ? 'email' : 'text';
+  authEmail.placeholder = isSignUp ? 'you@example.com' : 'you@example.com or username';
+  authEmail.autocomplete = isSignUp ? 'email' : 'username';
+
   authConfirmWrap.classList.toggle('hidden', !isSignUp);
   authConfirm.required = isSignUp;
   authPassword.autocomplete = isSignUp ? 'new-password' : 'current-password';
@@ -208,10 +222,14 @@ function renderAuthForm() {
   authInfo.textContent = '';
 
   supabaseWarning.classList.toggle('hidden', isSupabaseConfigured);
+  authUsername.disabled = !isSupabaseConfigured;
   authEmail.disabled = !isSupabaseConfigured;
   authPassword.disabled = !isSupabaseConfigured;
   authConfirm.disabled = !isSupabaseConfigured;
   authSubmit.disabled = !isSupabaseConfigured;
+  document.querySelectorAll('[data-oauth]').forEach((btn) => {
+    btn.disabled = !isSupabaseConfigured;
+  });
 }
 
 authToggleMode.addEventListener('click', () => {
@@ -253,7 +271,16 @@ authForm.addEventListener('submit', async (e) => {
 
   try {
     if (authMode === 'signup') {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const username = authUsername.value.trim();
+      if (!/^[a-zA-Z0-9_.-]{3,24}$/.test(username)) {
+        authError.textContent = 'Username must be 3–24 characters (letters, numbers, _, ., -).';
+        return;
+      }
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { username } }
+      });
       if (error) {
         authError.textContent = error.message;
       } else if (data.session && data.user) {
@@ -267,7 +294,22 @@ authForm.addEventListener('submit', async (e) => {
         authInfo.classList.remove('hidden');
       }
     } else {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      let loginEmail = email;
+      if (!email.includes('@')) {
+        const { data: resolvedEmail, error: rpcError } = await supabase.rpc('resolve_login_email', {
+          p_identifier: email
+        });
+        if (rpcError || !resolvedEmail) {
+          authError.textContent = 'No account found with that username.';
+          return;
+        }
+        loginEmail = resolvedEmail;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password
+      });
       if (error) {
         authError.textContent = error.message;
       } else if (data.user) {
@@ -280,6 +322,24 @@ authForm.addEventListener('submit', async (e) => {
     authSubmit.disabled = !isSupabaseConfigured;
     authSubmit.textContent = authMode === 'signup' ? 'Create Account' : 'Sign In';
   }
+});
+
+// OAuth sign-in (Google, Apple, Microsoft)
+document.querySelectorAll('[data-oauth]').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    authError.textContent = '';
+    const provider = btn.dataset.oauth;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    if (error) {
+      authError.textContent = error.message;
+    }
+  });
 });
 
 async function handleAuthenticatedUser(user) {

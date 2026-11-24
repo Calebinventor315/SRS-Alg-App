@@ -654,6 +654,52 @@ input[type="range"]::-moz-range-thumb {
   border-top: 1px solid var(--surface-muted);
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 12px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.oauth-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.btn-oauth {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 8px;
+}
+
+.btn-oauth:hover:not(:disabled) {
+  background: var(--surface-muted);
+}
+
+.oauth-icon {
+  font-weight: 700;
+  font-size: 14px;
+}
+
 /* ==================== Sync Badge ==================== */
 .sync-badge {
   font-family: var(--font-mono);
