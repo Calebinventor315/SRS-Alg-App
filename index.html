@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Chinese SRS</title>
+  <title>SRS Learning</title>
   <link rel="stylesheet" href="/src/styles.css" />
 </head>
 <body>
@@ -11,8 +11,8 @@
   <section id="auth-view" class="auth-shell hidden">
     <div class="auth-card">
       <div class="auth-header">
-        <div class="brand-mark">中文</div>
-        <h1 id="auth-title" class="auth-title">Sign in to Chinese SRS</h1>
+        <div class="brand-mark">SRS</div>
+        <h1 id="auth-title" class="auth-title">Sign in to SRS Learning</h1>
         <p id="auth-subtitle" class="auth-subtitle">Sync your decks and progress across any device.</p>
       </div>
 
@@ -77,8 +77,8 @@
     <header class="topbar">
       <div class="topbar-left">
         <div class="brand-inline">
-          <span class="brand-mark brand-mark-sm">中文</span>
-          <span class="brand-name">Chinese SRS</span>
+          <span class="brand-mark brand-mark-sm">SRS</span>
+          <span class="brand-name">SRS Learning</span>
         </div>
       </div>
       <div class="topbar-right">
@@ -91,23 +91,34 @@
     <section class="home-hero">
       <div class="home-hero-text">
         <h1 class="home-title">Your Decks</h1>
-        <p class="home-subtitle">Pick a deck, choose forward or backwards (for pinyin), and study with flashcards or spelling.</p>
+        <p class="home-subtitle">Each subject is one deck — choose a section from its dropdown, create custom decks, or import a .zip / .json deck package.</p>
       </div>
 
+      <div class="home-actions">
+        <button type="button" id="btn-open-builder" class="btn btn-primary">+ Create Deck</button>
+        <button type="button" id="btn-import-deck" class="btn btn-ghost">Import .zip / .json</button>
+        <input id="import-file-input" type="file" accept=".zip,.json" class="hidden" />
+      </div>
+    </section>
+
+    <div id="home-toast" class="home-toast hidden" role="status"></div>
+
+    <section class="mode-bar-row">
       <div class="mode-bar">
         <div class="segmented-group">
           <span class="segmented-label">Direction</span>
           <div class="segmented" role="group" aria-label="Study direction">
-            <button type="button" class="seg-btn" data-direction="forward">Pinyin → Hanzi</button>
-            <button type="button" class="seg-btn" data-direction="reverse">Hanzi → Pinyin</button>
+            <button type="button" class="seg-btn" data-direction="forward">Forward</button>
+            <button type="button" class="seg-btn" data-direction="reverse">Reverse</button>
           </div>
         </div>
 
         <div class="segmented-group">
-          <span class="segmented-label">Mode</span>
+          <span class="segmented-label">Default Mode</span>
           <div class="segmented" role="group" aria-label="Study mode">
             <button type="button" class="seg-btn" data-mode="flashcard">Flashcards</button>
             <button type="button" class="seg-btn" data-mode="spelling">Spelling</button>
+            <button type="button" class="seg-btn" data-mode="speaking">Speaking</button>
           </div>
         </div>
       </div>
@@ -122,16 +133,18 @@
       <div class="topbar-left">
         <button type="button" id="btn-back-home" class="btn btn-ghost">← Decks</button>
         <select id="deck-select" aria-label="Select deck" class="deck-select"></select>
-        <button type="button" id="btn-reset-deck" class="btn btn-ghost">Reset Deck</button>
+        <select id="section-select" aria-label="Select section" class="deck-select hidden"></select>
+        <button type="button" id="btn-reset-deck" class="btn btn-ghost">Reset</button>
       </div>
       <div class="topbar-right">
-        <div class="segmented segmented-compact" role="group" aria-label="Study direction">
-          <button type="button" class="seg-btn" data-direction="forward">Pinyin → Hanzi</button>
-          <button type="button" class="seg-btn" data-direction="reverse">Hanzi → Pinyin</button>
+        <div id="study-direction-group" class="segmented segmented-compact" role="group" aria-label="Study direction">
+          <button type="button" id="btn-dir-forward" class="seg-btn" data-direction="forward">Forward</button>
+          <button type="button" id="btn-dir-reverse" class="seg-btn" data-direction="reverse">Reverse</button>
         </div>
-        <div class="segmented segmented-compact" role="group" aria-label="Study mode">
-          <button type="button" class="seg-btn" data-mode="flashcard">Flashcards</button>
-          <button type="button" class="seg-btn" data-mode="spelling">Spelling</button>
+        <div id="study-mode-group" class="segmented segmented-compact" role="group" aria-label="Study mode">
+          <button type="button" id="btn-mode-flashcard" class="seg-btn" data-mode="flashcard">Flashcards</button>
+          <button type="button" id="btn-mode-spelling" class="seg-btn" data-mode="spelling">Spelling</button>
+          <button type="button" id="btn-mode-speaking" class="seg-btn" data-mode="speaking">Speaking</button>
         </div>
         <span id="study-sync-badge" class="sync-badge">Offline</span>
         <button type="button" id="btn-study-auth" class="btn btn-ghost">Sign Out</button>
@@ -147,13 +160,19 @@
               <div id="front-direction-pill" class="direction-pill">Pinyin → Hanzi</div>
               <div id="front-main" class="card-pinyin"></div>
               <div id="front-sub" class="card-sub-front hidden"></div>
-              <span class="keycap card-keycap">Space</span>
+              <div class="card-face-actions">
+                <button type="button" id="btn-flashcard-audio-front" class="btn btn-audio-chip" title="Listen">🔊 Listen</button>
+                <span class="keycap">Space</span>
+              </div>
             </div>
             <div class="card-face card-back">
               <div id="back-main" class="card-hanzi"></div>
               <div id="back-sub" class="card-english"></div>
               <div id="back-extra" class="card-extra hidden"></div>
-              <span class="keycap keycap-dark card-keycap">Space</span>
+              <div class="card-face-actions">
+                <button type="button" id="btn-flashcard-audio-back" class="btn btn-audio-chip btn-audio-chip-dark" title="Listen">🔊 Listen</button>
+                <span class="keycap keycap-dark">Space</span>
+              </div>
             </div>
           </div>
         </div>
@@ -163,7 +182,8 @@
           <div class="spelling-prompt-area">
             <div class="spelling-prompt-head">
               <span id="spelling-direction-pill" class="direction-pill">Type Hanzi</span>
-              <button type="button" id="btn-spelling-hint" class="btn-link btn-hint hidden">Show English hint</button>
+              <button type="button" id="btn-spelling-audio" class="btn btn-audio-chip" title="Listen">🔊 Listen</button>
+              <button type="button" id="btn-spelling-hint" class="btn-link btn-hint hidden">Show hint</button>
             </div>
             <div id="spelling-prompt-main" class="spelling-prompt-main"></div>
             <div id="spelling-prompt-sub" class="spelling-prompt-sub hidden"></div>
@@ -185,11 +205,57 @@
             </button>
           </form>
 
+          <!-- Clickable Accent & Tone Bar -->
+          <div id="accent-bar-wrap" class="accent-bar-wrap">
+            <div class="accent-bar-head">
+              <span class="accent-bar-title">Accents &amp; Tones</span>
+              <select id="accent-palette-select" class="accent-select" aria-label="Accent character set"></select>
+            </div>
+            <div id="accent-keys" class="accent-keys"></div>
+          </div>
+
           <div id="spelling-feedback" class="spelling-feedback hidden" aria-live="polite">
             <div id="spelling-verdict" class="spelling-verdict"></div>
             <div id="spelling-comparison" class="spelling-comparison"></div>
             <div id="spelling-full-card" class="spelling-full-card"></div>
             <div id="spelling-shortcut-hint" class="spelling-shortcut-hint"></div>
+          </div>
+        </div>
+
+        <!-- Speaking Mode -->
+        <div id="speaking-panel" class="speaking-panel hidden">
+          <div class="speaking-prompt-area">
+            <div class="direction-pill">Pronounce Out Loud</div>
+            <div id="speaking-prompt-back" class="speaking-prompt-main"></div>
+            <div id="speaking-prompt-front" class="speaking-prompt-reading"></div>
+            <div id="speaking-prompt-meaning" class="speaking-prompt-meaning"></div>
+          </div>
+
+          <div class="speaking-controls">
+            <button type="button" id="btn-record-voice" class="btn btn-record">
+              <span id="record-dot" class="record-dot"></span>
+              <span id="btn-record-label">Record &amp; Verify</span>
+              <kbd class="keycap keycap-dark">Space</kbd>
+            </button>
+
+            <div class="speaking-audio-row">
+              <button type="button" id="btn-play-reference" class="btn btn-ghost">🔊 Play Reference</button>
+              <button type="button" id="btn-play-reference-slow" class="btn btn-ghost">🐢 0.75×</button>
+              <button type="button" id="btn-play-recording" class="btn btn-ghost" disabled>▶ Play My Recording</button>
+            </div>
+          </div>
+
+          <div id="speaking-live-box" class="speaking-live-box hidden">
+            <span class="live-pulse"></span>
+            <span id="speaking-live-text">Listening… speak clearly now.</span>
+          </div>
+
+          <div id="speaking-error" class="auth-error"></div>
+
+          <div id="speaking-feedback" class="spelling-feedback hidden" aria-live="polite">
+            <div id="speaking-verdict" class="spelling-verdict"></div>
+            <div id="speaking-comparison" class="spelling-comparison"></div>
+            <div id="speaking-shortcut-hint" class="spelling-shortcut-hint"></div>
           </div>
         </div>
       </div>
@@ -227,6 +293,104 @@
       <div id="queue-grid" class="queue-grid"></div>
     </section>
   </main>
+
+  <!-- Create / Edit Deck Modal -->
+  <div id="builder-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="builder-modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="builder-modal-title" class="modal-title">Create New Deck</h2>
+        <button type="button" id="btn-close-builder" class="btn btn-ghost">✕</button>
+      </div>
+
+      <form id="builder-form" class="builder-form">
+        <div class="builder-grid-2">
+          <div class="field">
+            <label for="builder-title">Deck Title</label>
+            <input id="builder-title" type="text" placeholder="e.g. Spanish — Chapter 2" required />
+          </div>
+          <div class="field">
+            <label for="builder-subtitle">Description (optional)</label>
+            <input id="builder-subtitle" type="text" placeholder="e.g. Verbs, greetings, travel" />
+          </div>
+        </div>
+
+        <div class="builder-grid-3">
+          <div class="field">
+            <label for="builder-language">Language (Voice &amp; Speech)</label>
+            <select id="builder-language" class="deck-select">
+              <option value="zh-CN">Chinese (zh-CN)</option>
+              <option value="es-ES">Spanish (es-ES)</option>
+              <option value="fr-FR">French (fr-FR)</option>
+              <option value="de-DE">German (de-DE)</option>
+              <option value="ja-JP">Japanese (ja-JP)</option>
+              <option value="ko-KR">Korean (ko-KR)</option>
+              <option value="pt-BR">Portuguese (pt-BR)</option>
+              <option value="it-IT">Italian (it-IT)</option>
+              <option value="en-US">English (en-US)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="builder-front-label">Front Field Label</label>
+            <input id="builder-front-label" type="text" value="Front" placeholder="e.g. Pinyin or Spanish" />
+          </div>
+          <div class="field">
+            <label for="builder-back-label">Back Field Label</label>
+            <input id="builder-back-label" type="text" value="Back" placeholder="e.g. Hanzi or English" />
+          </div>
+        </div>
+
+        <div class="builder-grid-2">
+          <div class="field">
+            <label for="builder-accent-set">Accent / Tone Keyboard</label>
+            <select id="builder-accent-set" class="deck-select">
+              <option value="pinyin">Pinyin Tones (ā á ǎ à …)</option>
+              <option value="spanish">Spanish (á é í ó ú ñ ¿ ¡)</option>
+              <option value="french">French (à â ç é è ê …)</option>
+              <option value="german">German (ä ö ü ß)</option>
+              <option value="portuguese">Portuguese / Italian</option>
+              <option value="european">All European Accents</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Enabled Study Options</label>
+            <div class="checkbox-row">
+              <label class="check-pill"><input id="opt-flashcard" type="checkbox" checked /> Flashcards</label>
+              <label class="check-pill"><input id="opt-spelling" type="checkbox" checked /> Spelling</label>
+              <label class="check-pill"><input id="opt-speaking" type="checkbox" checked /> Speaking</label>
+              <label class="check-pill"><input id="opt-reverse" type="checkbox" checked /> Reverse</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="builder-cards-section">
+          <div class="builder-cards-head">
+            <label>Cards</label>
+            <div class="builder-cards-tools">
+              <button type="button" id="btn-toggle-bulk" class="btn btn-ghost">Bulk Paste</button>
+              <button type="button" id="btn-add-card-row" class="btn btn-ghost">+ Add Card</button>
+            </div>
+          </div>
+
+          <div id="bulk-paste-box" class="bulk-paste-box hidden">
+            <p class="bulk-help">Paste one card per line: <code>Front | Back | Meaning (optional) | Section (optional)</code></p>
+            <textarea id="bulk-paste-text" rows="4" placeholder="hola | hello | greeting | Basics&#10;adiós | goodbye | farewell | Basics"></textarea>
+            <button type="button" id="btn-apply-bulk" class="btn btn-neutral">Add Lines to Cards</button>
+          </div>
+
+          <div id="builder-card-rows" class="builder-card-rows"></div>
+        </div>
+
+        <div id="builder-error" class="auth-error"></div>
+
+        <div class="modal-footer">
+          <button type="button" id="btn-cancel-builder" class="btn btn-ghost">Cancel</button>
+          <button type="submit" id="btn-save-deck" class="btn btn-primary">Save Deck</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script type="module" src="/src/app.js"></script>
 </body>

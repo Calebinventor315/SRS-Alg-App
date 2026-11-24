@@ -1,31 +1,63 @@
-/* Main Application Controller — Auth, Home, Flashcard/Spelling, Forward/Reverse, Cloud Sync */
-import { SRS_DECKS } from './decks.js';
+/* SRS Learning — Auth, Home, Multi-Deck & Sections, Flashcard/Spelling/Speaking, Accents, Zip Import/Export, Cloud Sync */
+import {
+  getAllDecks,
+  getSectionCards,
+  inferAccentSet,
+  normalizeDeck,
+  slugify
+} from './decks.js';
 import { WORKING_SET_SIZE, createDeckCards, step } from './srs.js';
 import { checkSpellingAnswer } from './pinyin.js';
+import { ACCENT_PALETTES, insertCharAtCursor } from './accents.js';
+import { exportDeckZip, importDeckFile } from './deckPackage.js';
+import { deleteDeckAudio } from './audioStore.js';
+import {
+  isMediaRecorderSupported,
+  isSpeechRecognitionSupported,
+  playAudioUrl,
+  playReferenceAudio,
+  startSpeakingSession,
+  stopPlayback,
+  verifySpokenAnswer
+} from './speech.js';
 import { isSupabaseConfigured, supabase } from './supabase.js';
 import {
   buildFreshData,
   createCloudSyncer,
+  ensureTrack,
   loadAndSyncInitialState,
   loadLocal,
-  saveLocal
+  saveLocal,
+  trackKey
 } from './storage.js';
 
 // App state
-let currentUser = null; // Supabase user object or null
+let currentUser = null;
 let offlineMode = false;
 let currentView = 'auth'; // 'auth' | 'home' | 'study'
 let authMode = 'signin'; // 'signin' | 'signup'
 let userData = buildFreshData();
 
-// Study session state
+// Study transient state
 let flipped = false;
 let lastMovedUuid = null;
 let spellingResult = null; // null | { isCorrect, typed, expected, note }
 let spellingHintVisible = false;
-const undoStacks = {}; // keyed by `${deckId}:${direction}`
+let selectedAccentPalette = 'pinyin';
 
-// DOM references — Views
+// Speaking transient state
+let speakingSession = null; // active recorder controller or null
+let isRecording = false;
+let recordedAudioUrl = null;
+let speakingResult = null; // null | { status, score, heard, target, isCorrect, recognitionAvailable }
+
+// Deck builder state
+let editingDeckId = null;
+
+// Undo stacks keyed by `${deckId}::${sectionId}::${direction}`
+const undoStacks = {};
+
+// DOM — Views
 const authView = document.getElementById('auth-view');
 const homeView = document.getElementById('home-view');
 const studyView = document.getElementById('study-view');
@@ -52,15 +84,27 @@ const btnOfflineMode = document.getElementById('btn-offline-mode');
 const homeSyncBadge = document.getElementById('home-sync-badge');
 const homeUserEmail = document.getElementById('home-user-email');
 const btnHomeAuth = document.getElementById('btn-home-auth');
+const btnOpenBuilder = document.getElementById('btn-open-builder');
+const btnImportDeck = document.getElementById('btn-import-deck');
+const importFileInput = document.getElementById('import-file-input');
+const homeToast = document.getElementById('home-toast');
 const deckGrid = document.getElementById('deck-grid');
 
-// DOM — Study
+// DOM — Study Topbar
 const btnBackHome = document.getElementById('btn-back-home');
 const deckSelect = document.getElementById('deck-select');
+const sectionSelect = document.getElementById('section-select');
 const btnResetDeck = document.getElementById('btn-reset-deck');
+const studyDirectionGroup = document.getElementById('study-direction-group');
+const btnDirForward = document.getElementById('btn-dir-forward');
+const btnDirReverse = document.getElementById('btn-dir-reverse');
+const btnModeFlashcard = document.getElementById('btn-mode-flashcard');
+const btnModeSpelling = document.getElementById('btn-mode-spelling');
+const btnModeSpeaking = document.getElementById('btn-mode-speaking');
 const studySyncBadge = document.getElementById('study-sync-badge');
 const btnStudyAuth = document.getElementById('btn-study-auth');
 
+// DOM — Flashcard
 const flashcardEl = document.getElementById('flashcard');
 const cardInnerEl = document.getElementById('card-inner');
 const frontDirectionPill = document.getElementById('front-direction-pill');
@@ -69,21 +113,47 @@ const frontSubEl = document.getElementById('front-sub');
 const backMainEl = document.getElementById('back-main');
 const backSubEl = document.getElementById('back-sub');
 const backExtraEl = document.getElementById('back-extra');
+const btnFlashcardAudioFront = document.getElementById('btn-flashcard-audio-front');
+const btnFlashcardAudioBack = document.getElementById('btn-flashcard-audio-back');
 
+// DOM — Spelling
 const spellingPanel = document.getElementById('spelling-panel');
 const spellingDirectionPill = document.getElementById('spelling-direction-pill');
+const btnSpellingAudio = document.getElementById('btn-spelling-audio');
 const btnSpellingHint = document.getElementById('btn-spelling-hint');
 const spellingPromptMain = document.getElementById('spelling-prompt-main');
 const spellingPromptSub = document.getElementById('spelling-prompt-sub');
 const spellingForm = document.getElementById('spelling-form');
 const spellingInput = document.getElementById('spelling-input');
 const btnSpellingCheck = document.getElementById('btn-spelling-check');
+const accentBarWrap = document.getElementById('accent-bar-wrap');
+const accentPaletteSelect = document.getElementById('accent-palette-select');
+const accentKeys = document.getElementById('accent-keys');
 const spellingFeedback = document.getElementById('spelling-feedback');
 const spellingVerdict = document.getElementById('spelling-verdict');
 const spellingComparison = document.getElementById('spelling-comparison');
 const spellingFullCard = document.getElementById('spelling-full-card');
 const spellingShortcutHint = document.getElementById('spelling-shortcut-hint');
 
+// DOM — Speaking
+const speakingPanel = document.getElementById('speaking-panel');
+const speakingPromptBack = document.getElementById('speaking-prompt-back');
+const speakingPromptFront = document.getElementById('speaking-prompt-front');
+const speakingPromptMeaning = document.getElementById('speaking-prompt-meaning');
+const btnRecordVoice = document.getElementById('btn-record-voice');
+const btnRecordLabel = document.getElementById('btn-record-label');
+const btnPlayReference = document.getElementById('btn-play-reference');
+const btnPlayReferenceSlow = document.getElementById('btn-play-reference-slow');
+const btnPlayRecording = document.getElementById('btn-play-recording');
+const speakingLiveBox = document.getElementById('speaking-live-box');
+const speakingLiveText = document.getElementById('speaking-live-text');
+const speakingError = document.getElementById('speaking-error');
+const speakingFeedback = document.getElementById('speaking-feedback');
+const speakingVerdict = document.getElementById('speaking-verdict');
+const speakingComparison = document.getElementById('speaking-comparison');
+const speakingShortcutHint = document.getElementById('speaking-shortcut-hint');
+
+// DOM — Controls & Queue
 const btnRight = document.getElementById('btn-right');
 const btnWrong = document.getElementById('btn-wrong');
 const btnRightLabel = document.getElementById('btn-right-label');
@@ -93,14 +163,36 @@ const multiplierSlider = document.getElementById('multiplier-slider');
 const multiplierValue = document.getElementById('multiplier-value');
 const queueGrid = document.getElementById('queue-grid');
 
-// Sync status management
-let syncStatus = 'offline'; // 'offline' | 'synced' | 'syncing' | 'error'
+// DOM — Deck Builder Modal
+const builderModal = document.getElementById('builder-modal');
+const builderModalTitle = document.getElementById('builder-modal-title');
+const btnCloseBuilder = document.getElementById('btn-close-builder');
+const btnCancelBuilder = document.getElementById('btn-cancel-builder');
+const builderForm = document.getElementById('builder-form');
+const builderTitle = document.getElementById('builder-title');
+const builderSubtitle = document.getElementById('builder-subtitle');
+const builderLanguage = document.getElementById('builder-language');
+const builderFrontLabel = document.getElementById('builder-front-label');
+const builderBackLabel = document.getElementById('builder-back-label');
+const builderAccentSet = document.getElementById('builder-accent-set');
+const optFlashcard = document.getElementById('opt-flashcard');
+const optSpelling = document.getElementById('opt-spelling');
+const optSpeaking = document.getElementById('opt-speaking');
+const optReverse = document.getElementById('opt-reverse');
+const btnToggleBulk = document.getElementById('btn-toggle-bulk');
+const bulkPasteBox = document.getElementById('bulk-paste-box');
+const bulkPasteText = document.getElementById('bulk-paste-text');
+const btnApplyBulk = document.getElementById('btn-apply-bulk');
+const btnAddCardRow = document.getElementById('btn-add-card-row');
+const builderCardRows = document.getElementById('builder-card-rows');
+const builderError = document.getElementById('builder-error');
+
+// Sync status
 const cloudSyncer = createCloudSyncer((status) => {
   setSyncStatus(status);
 });
 
 function setSyncStatus(status) {
-  syncStatus = status;
   const labelMap = {
     synced: 'Synced',
     syncing: 'Syncing…',
@@ -115,31 +207,84 @@ function setSyncStatus(status) {
 }
 
 function escapeHtml(str) {
-  return String(str)
+  return String(str ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
 
-function getActiveDeckTrack() {
-  const deck = userData.decks[userData.activeDeckId];
-  if (!deck) return [];
-  return deck[userData.direction] || [];
+let toastTimer = null;
+function showHomeToast(message, isError = false) {
+  homeToast.textContent = message;
+  homeToast.classList.remove('hidden', 'is-error');
+  if (isError) homeToast.classList.add('is-error');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    homeToast.classList.add('hidden');
+  }, 5000);
 }
 
-function setActiveDeckTrack(cards) {
-  if (!userData.decks[userData.activeDeckId]) {
-    userData.decks[userData.activeDeckId] = {
-      forward: createDeckCards(SRS_DECKS[userData.activeDeckId].cards),
-      reverse: createDeckCards(SRS_DECKS[userData.activeDeckId].cards)
-    };
+/* ==================== HELPERS ==================== */
+
+function getDecksMap() {
+  return getAllDecks(userData);
+}
+
+function getActiveDeck() {
+  const all = getDecksMap();
+  if (!all[userData.activeDeckId]) {
+    userData.activeDeckId = Object.keys(all)[0];
   }
-  userData.decks[userData.activeDeckId][userData.direction] = cards;
+  return all[userData.activeDeckId];
+}
+
+function getActiveSectionId(deck) {
+  const sec = (userData.activeSections && userData.activeSections[deck.id]) || 'all';
+  const valid = (deck.sections || []).some((s) => s.id === sec);
+  return valid ? sec : 'all';
+}
+
+function setActiveSectionId(deckId, sectionId) {
+  if (!userData.activeSections) userData.activeSections = {};
+  userData.activeSections[deckId] = sectionId || 'all';
+}
+
+function enforceDeckConstraints(deck) {
+  const modes = deck.enabledModes || {
+    flashcard: true,
+    spelling: true,
+    speaking: true,
+    reverse: true
+  };
+  if (!modes.reverse && userData.direction === 'reverse') {
+    userData.direction = 'forward';
+  }
+  if (!modes[userData.studyMode]) {
+    if (modes.flashcard) userData.studyMode = 'flashcard';
+    else if (modes.spelling) userData.studyMode = 'spelling';
+    else if (modes.speaking) userData.studyMode = 'speaking';
+    else userData.studyMode = 'flashcard';
+  }
+}
+
+function getActiveTrack() {
+  const deck = getActiveDeck();
+  const sec = getActiveSectionId(deck);
+  return ensureTrack(userData, deck, sec, userData.direction);
+}
+
+function setActiveTrack(cards) {
+  const deck = getActiveDeck();
+  const sec = getActiveSectionId(deck);
+  const key = trackKey(deck.id, sec, userData.direction);
+  userData.progress[key] = cards;
 }
 
 function getUndoStack() {
-  const key = `${userData.activeDeckId}:${userData.direction}`;
+  const deck = getActiveDeck();
+  const sec = getActiveSectionId(deck);
+  const key = trackKey(deck.id, sec, userData.direction);
   if (!undoStacks[key]) undoStacks[key] = [];
   return undoStacks[key];
 }
@@ -155,7 +300,38 @@ function persist() {
   }
 }
 
+function stopActiveRecordingAndAudio() {
+  stopPlayback();
+  if (speakingSession) {
+    try {
+      speakingSession.stop();
+    } catch {
+      // Ignore
+    }
+    speakingSession = null;
+  }
+  isRecording = false;
+}
+
+function resetCardTransientState() {
+  stopActiveRecordingAndAudio();
+  flipped = false;
+  lastMovedUuid = null;
+  spellingResult = null;
+  spellingHintVisible = false;
+  spellingInput.value = '';
+  spellingInput.disabled = false;
+  speakingResult = null;
+  speakingError.textContent = '';
+  speakingLiveBox.classList.add('hidden');
+  if (recordedAudioUrl) {
+    URL.revokeObjectURL(recordedAudioUrl);
+    recordedAudioUrl = null;
+  }
+}
+
 function showView(view) {
+  stopActiveRecordingAndAudio();
   currentView = view;
   authView.classList.toggle('hidden', view !== 'auth');
   homeView.classList.toggle('hidden', view !== 'home');
@@ -164,18 +340,17 @@ function showView(view) {
   if (view === 'home') {
     renderHome();
   } else if (view === 'study') {
+    const deck = getActiveDeck();
+    enforceDeckConstraints(deck);
+    selectedAccentPalette =
+      deck.accentSet && ACCENT_PALETTES[deck.accentSet]
+        ? deck.accentSet
+        : inferAccentSet(deck.language);
+    populateStudyDropdowns();
+    renderAccentBar();
     renderStudy();
     focusSpellingIfNeeded();
   }
-}
-
-function updateSegmentedControls() {
-  document.querySelectorAll('[data-direction]').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.direction === userData.direction);
-  });
-  document.querySelectorAll('[data-mode]').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.mode === userData.studyMode);
-  });
 }
 
 function updateUserChrome() {
@@ -188,17 +363,20 @@ function updateUserChrome() {
   btnStudyAuth.textContent = isLoggedIn ? 'Sign Out' : 'Sign In';
 }
 
-function populateDeckDropdown() {
-  deckSelect.innerHTML = Object.keys(SRS_DECKS)
-    .map((id) => `<option value="${id}">${escapeHtml(SRS_DECKS[id].label)}</option>`)
-    .join('');
+function updateSegmentedControls() {
+  document.querySelectorAll('[data-direction]').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.direction === userData.direction);
+  });
+  document.querySelectorAll('[data-mode]').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.mode === userData.studyMode);
+  });
 }
 
 /* ==================== AUTH ==================== */
 
 function renderAuthForm() {
   const isSignUp = authMode === 'signup';
-  authTitle.textContent = isSignUp ? 'Create your account' : 'Sign in to Chinese SRS';
+  authTitle.textContent = isSignUp ? 'Create your account' : 'Sign in to SRS Learning';
   authSubtitle.textContent = isSignUp
     ? 'Sign up with your email, username, and password.'
     : 'Sign in with your email or username, or use a provider below.';
@@ -286,8 +464,6 @@ authForm.addEventListener('submit', async (e) => {
       } else if (data.session && data.user) {
         await handleAuthenticatedUser(data.user);
       } else {
-        authInfo.textContent = 'Account created! Check your email to confirm, then sign in.';
-        authInfo.classList.remove('hidden');
         authMode = 'signin';
         renderAuthForm();
         authInfo.textContent = 'Account created! Check your email to confirm, then sign in.';
@@ -324,7 +500,6 @@ authForm.addEventListener('submit', async (e) => {
   }
 });
 
-// OAuth sign-in (Google, Apple, Microsoft)
 document.querySelectorAll('[data-oauth]').forEach((btn) => {
   btn.addEventListener('click', async () => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -332,13 +507,9 @@ document.querySelectorAll('[data-oauth]').forEach((btn) => {
     const provider = btn.dataset.oauth;
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: {
-        redirectTo: window.location.origin
-      }
+      options: { redirectTo: window.location.origin }
     });
-    if (error) {
-      authError.textContent = error.message;
-    }
+    if (error) authError.textContent = error.message;
   });
 });
 
@@ -355,6 +526,7 @@ async function handleAuthenticatedUser(user) {
 }
 
 async function handleSignOutOrAuthClick() {
+  stopActiveRecordingAndAudio();
   if (currentUser && supabase) {
     await cloudSyncer.flush();
     await supabase.auth.signOut();
@@ -375,17 +547,14 @@ btnStudyAuth.addEventListener('click', handleSignOutOrAuthClick);
 
 function computeTrackStats(cards) {
   const total = cards.length;
-  let started = 0;
   let learned = 0;
   let strong = 0;
   cards.forEach((c) => {
-    if (c.correct >= 1) started += 1;
     if (c.correct >= 3) learned += 1;
     if (c.correct >= 6) strong += 1;
   });
   return {
     total,
-    started,
     learned,
     strong,
     learnedPct: total ? Math.round((learned / total) * 100) : 0,
@@ -397,33 +566,73 @@ function renderHome() {
   updateSegmentedControls();
   updateUserChrome();
 
-  const dir = userData.direction;
-  const otherDir = dir === 'forward' ? 'reverse' : 'forward';
-  const modeLabel = userData.studyMode === 'spelling' ? 'Spelling' : 'Flashcards';
+  const decksMap = getDecksMap();
+  const deckIds = Object.keys(decksMap);
 
-  deckGrid.innerHTML = Object.keys(SRS_DECKS)
+  deckGrid.innerHTML = deckIds
     .map((id) => {
-      const meta = SRS_DECKS[id];
-      const track = (userData.decks[id] && userData.decks[id][dir]) || [];
-      const otherTrack = (userData.decks[id] && userData.decks[id][otherDir]) || [];
+      const deck = decksMap[id];
+      const activeSec = getActiveSectionId(deck);
+      const effectiveDir = deck.enabledModes.reverse ? userData.direction : 'forward';
+      const track = ensureTrack(userData, deck, activeSec, effectiveDir);
       const stats = computeTrackStats(track);
-      const otherStats = computeTrackStats(otherTrack);
       const nextCard = track[0];
       const previewText = nextCard
-        ? dir === 'forward'
-          ? nextCard.pinyin
-          : nextCard.hanzi
+        ? effectiveDir === 'reverse'
+          ? nextCard.back
+          : nextCard.front
         : '';
 
+      const modeBadges = [];
+      if (deck.enabledModes.flashcard) modeBadges.push('Flashcards');
+      if (deck.enabledModes.spelling) modeBadges.push('Spelling');
+      if (deck.enabledModes.speaking) modeBadges.push('Speaking');
+      if (deck.enabledModes.reverse) modeBadges.push('Reverse');
+
+      const hasSections = deck.sections && deck.sections.length > 1;
+      const sectionDropdownHtml = hasSections
+        ? `
+          <div class="deck-section-picker">
+            <label class="deck-section-label" for="home-sec-${escapeHtml(id)}">Practice part:</label>
+            <select id="home-sec-${escapeHtml(id)}" class="deck-select deck-select-sm" data-deck-section="${escapeHtml(id)}">
+              ${deck.sections
+                .map((s) => {
+                  const count = getSectionCards(deck, s.id).length;
+                  return `<option value="${escapeHtml(s.id)}" ${s.id === activeSec ? 'selected' : ''}>${escapeHtml(s.label)} (${count})</option>`;
+                })
+                .join('')}
+            </select>
+          </div>
+        `
+        : '';
+
+      const studyModeLabel =
+        deck.enabledModes[userData.studyMode]
+          ? userData.studyMode.charAt(0).toUpperCase() + userData.studyMode.slice(1)
+          : deck.enabledModes.flashcard
+            ? 'Flashcards'
+            : deck.enabledModes.spelling
+              ? 'Spelling'
+              : 'Speaking';
+
       return `
-        <button type="button" class="deck-card" data-open-deck="${id}">
+        <article class="deck-card deck-card-rich">
           <div class="deck-card-top">
             <div class="deck-card-heading">
-              <h2 class="deck-card-title">${escapeHtml(meta.title)}</h2>
-              <p class="deck-card-sub">${escapeHtml(meta.subtitle)}</p>
+              <div class="deck-title-row">
+                <h2 class="deck-card-title">${escapeHtml(deck.title)}</h2>
+                <span class="lang-pill">${escapeHtml(deck.language)}</span>
+              </div>
+              ${deck.subtitle ? `<p class="deck-card-sub">${escapeHtml(deck.subtitle)}</p>` : ''}
             </div>
             <span class="deck-count-pill">${stats.total} cards</span>
           </div>
+
+          <div class="deck-mode-pills">
+            ${modeBadges.map((m) => `<span class="mode-pill">${m}</span>`).join('')}
+          </div>
+
+          ${sectionDropdownHtml}
 
           <div class="deck-progress">
             <div class="deck-progress-bar">
@@ -437,42 +646,395 @@ function renderHome() {
           </div>
 
           <div class="deck-card-footer">
-            <span class="deck-next-preview">Up next: <strong>${escapeHtml(previewText)}</strong>${
-              otherStats.learned > 0
-                ? ` · ${otherDir === 'reverse' ? 'Reverse' : 'Forward'}: ${otherStats.learned}/${otherStats.total}`
-                : ''
-            }</span>
-            <span class="deck-card-cta">Study ${modeLabel} →</span>
+            <span class="deck-next-preview">Up next: <strong>${escapeHtml(previewText)}</strong></span>
+            <div class="deck-card-actions">
+              <button type="button" class="btn btn-ghost btn-xs" data-export-deck="${escapeHtml(id)}" title="Export as .zip">Export .zip</button>
+              ${
+                !deck.builtIn
+                  ? `<button type="button" class="btn btn-ghost btn-xs" data-edit-deck="${escapeHtml(id)}">Edit</button>
+                     <button type="button" class="btn btn-ghost btn-xs btn-danger-text" data-delete-deck="${escapeHtml(id)}">Delete</button>`
+                  : ''
+              }
+              <button type="button" class="btn btn-primary btn-sm" data-open-deck="${escapeHtml(id)}">Study ${studyModeLabel} →</button>
+            </div>
           </div>
-        </button>
+        </article>
       `;
     })
     .join('');
 
+  // Bind section dropdowns on Home cards
+  deckGrid.querySelectorAll('[data-deck-section]').forEach((sel) => {
+    sel.addEventListener('change', () => {
+      setActiveSectionId(sel.dataset.deckSection, sel.value);
+      persist();
+      renderHome();
+    });
+  });
+
+  // Open deck
   deckGrid.querySelectorAll('[data-open-deck]').forEach((btn) => {
     btn.addEventListener('click', () => {
       openDeck(btn.dataset.openDeck);
     });
   });
+
+  // Export deck as .zip
+  deckGrid.querySelectorAll('[data-export-deck]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const deck = getDecksMap()[btn.dataset.exportDeck];
+      if (!deck) return;
+      try {
+        await exportDeckZip(deck);
+        showHomeToast(`Exported "${deck.title}" as ${deck.id}.zip`);
+      } catch (err) {
+        showHomeToast(err?.message || 'Failed to export deck.', true);
+      }
+    });
+  });
+
+  // Edit custom deck
+  deckGrid.querySelectorAll('[data-edit-deck]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const deck = getDecksMap()[btn.dataset.editDeck];
+      if (deck && !deck.builtIn) openDeckBuilder(deck);
+    });
+  });
+
+  // Delete custom deck
+  deckGrid.querySelectorAll('[data-delete-deck]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.deleteDeck;
+      const deck = getDecksMap()[id];
+      if (!deck || deck.builtIn) return;
+      if (!confirm(`Delete "${deck.title}" and its saved progress?`)) return;
+
+      delete userData.customDecks[id];
+      Object.keys(userData.progress || {}).forEach((k) => {
+        if (k.startsWith(`${id}::`)) delete userData.progress[k];
+      });
+      await deleteDeckAudio(id);
+      if (userData.activeDeckId === id) {
+        userData.activeDeckId = 'chinese-unit-4';
+      }
+      persist();
+      renderHome();
+      showHomeToast(`Deleted "${deck.title}".`);
+    });
+  });
 }
 
 function openDeck(deckId) {
-  if (!SRS_DECKS[deckId]) return;
+  const decks = getDecksMap();
+  if (!decks[deckId]) return;
   userData.activeDeckId = deckId;
+  enforceDeckConstraints(decks[deckId]);
   resetCardTransientState();
   persist();
   showView('study');
 }
 
+/* ==================== IMPORT .ZIP / .JSON DECK ==================== */
+
+btnImportDeck.addEventListener('click', () => {
+  importFileInput.value = '';
+  importFileInput.click();
+});
+
+importFileInput.addEventListener('change', async () => {
+  const file = importFileInput.files && importFileInput.files[0];
+  if (!file) return;
+  try {
+    const { deck, audioCount } = await importDeckFile(file);
+    if (!userData.customDecks) userData.customDecks = {};
+    // Avoid colliding with built-in deck ID
+    if (deck.id === 'chinese-unit-4') {
+      deck.id = `${deck.id}-${Date.now().toString(36)}`;
+    }
+    userData.customDecks[deck.id] = deck;
+    setActiveSectionId(deck.id, 'all');
+    persist();
+    renderHome();
+    const audioNote = audioCount > 0 ? ` with ${audioCount} audio file${audioCount === 1 ? '' : 's'}` : '';
+    showHomeToast(`Imported "${deck.title}" (${deck.cards.length} cards${audioNote})!`);
+  } catch (err) {
+    showHomeToast(err?.message || 'Could not import deck file.', true);
+  }
+});
+
+/* ==================== CREATE / EDIT DECK BUILDER ==================== */
+
+function createBuilderRowHtml(card = {}) {
+  const secVal = card.section && card.section !== 'all' ? card.section : '';
+  return `
+    <div class="builder-card-row">
+      <input type="text" class="row-front" placeholder="Front" value="${escapeHtml(card.front || '')}" />
+      <input type="text" class="row-back" placeholder="Back" value="${escapeHtml(card.back || '')}" />
+      <input type="text" class="row-meaning" placeholder="Meaning / hint" value="${escapeHtml(card.meaning || '')}" />
+      <input type="text" class="row-section" placeholder="Section (opt.)" value="${escapeHtml(secVal)}" />
+      <button type="button" class="btn btn-ghost btn-xs btn-remove-row" title="Remove card">✕</button>
+    </div>
+  `;
+}
+
+function appendBuilderCardRow(card = {}) {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = createBuilderRowHtml(card).trim();
+  const row = wrapper.firstElementChild;
+  row.querySelector('.btn-remove-row').addEventListener('click', () => {
+    if (builderCardRows.children.length > 1) row.remove();
+  });
+  builderCardRows.appendChild(row);
+}
+
+function openDeckBuilder(existingDeck = null) {
+  editingDeckId = existingDeck ? existingDeck.id : null;
+  builderModalTitle.textContent = existingDeck ? `Edit "${existingDeck.title}"` : 'Create New Deck';
+  builderError.textContent = '';
+  bulkPasteBox.classList.add('hidden');
+  bulkPasteText.value = '';
+
+  if (existingDeck) {
+    builderTitle.value = existingDeck.title;
+    builderSubtitle.value = existingDeck.subtitle || '';
+    builderLanguage.value = existingDeck.language || 'en-US';
+    builderFrontLabel.value = existingDeck.frontLabel || 'Front';
+    builderBackLabel.value = existingDeck.backLabel || 'Back';
+    builderAccentSet.value = existingDeck.accentSet || 'european';
+    optFlashcard.checked = existingDeck.enabledModes.flashcard !== false;
+    optSpelling.checked = existingDeck.enabledModes.spelling !== false;
+    optSpeaking.checked = existingDeck.enabledModes.speaking !== false;
+    optReverse.checked = existingDeck.enabledModes.reverse !== false;
+    builderCardRows.innerHTML = '';
+    existingDeck.cards.forEach((c) => appendBuilderCardRow(c));
+  } else {
+    builderTitle.value = '';
+    builderSubtitle.value = '';
+    builderLanguage.value = 'es-ES';
+    builderFrontLabel.value = 'Spanish';
+    builderBackLabel.value = 'English';
+    builderAccentSet.value = 'spanish';
+    optFlashcard.checked = true;
+    optSpelling.checked = true;
+    optSpeaking.checked = true;
+    optReverse.checked = true;
+    builderCardRows.innerHTML = '';
+    appendBuilderCardRow();
+    appendBuilderCardRow();
+    appendBuilderCardRow();
+  }
+
+  builderModal.classList.remove('hidden');
+  builderTitle.focus();
+}
+
+function closeDeckBuilder() {
+  builderModal.classList.add('hidden');
+  editingDeckId = null;
+}
+
+builderLanguage.addEventListener('change', () => {
+  const lang = builderLanguage.value;
+  builderAccentSet.value = inferAccentSet(lang);
+  if (lang.startsWith('zh')) {
+    builderFrontLabel.value = 'Pinyin';
+    builderBackLabel.value = 'Hanzi';
+  } else if (lang.startsWith('es')) {
+    builderFrontLabel.value = 'Spanish';
+    builderBackLabel.value = 'English';
+  } else if (lang.startsWith('fr')) {
+    builderFrontLabel.value = 'French';
+    builderBackLabel.value = 'English';
+  } else if (lang.startsWith('de')) {
+    builderFrontLabel.value = 'German';
+    builderBackLabel.value = 'English';
+  } else if (lang.startsWith('ja')) {
+    builderFrontLabel.value = 'Reading';
+    builderBackLabel.value = 'Japanese';
+  } else if (lang.startsWith('ko')) {
+    builderFrontLabel.value = 'Korean';
+    builderBackLabel.value = 'English';
+  } else {
+    builderFrontLabel.value = 'Front';
+    builderBackLabel.value = 'Back';
+  }
+});
+
+btnOpenBuilder.addEventListener('click', () => openDeckBuilder(null));
+btnCloseBuilder.addEventListener('click', closeDeckBuilder);
+btnCancelBuilder.addEventListener('click', closeDeckBuilder);
+btnAddCardRow.addEventListener('click', () => appendBuilderCardRow());
+btnToggleBulk.addEventListener('click', () => {
+  bulkPasteBox.classList.toggle('hidden');
+});
+
+btnApplyBulk.addEventListener('click', () => {
+  const lines = bulkPasteText.value
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (!lines.length) return;
+
+  // Remove empty starter rows before appending bulk lines
+  Array.from(builderCardRows.children).forEach((row) => {
+    const f = row.querySelector('.row-front').value.trim();
+    const b = row.querySelector('.row-back').value.trim();
+    if (!f && !b) row.remove();
+  });
+
+  lines.forEach((line) => {
+    const parts = line.split('|').map((p) => p.trim());
+    appendBuilderCardRow({
+      front: parts[0] || '',
+      back: parts[1] || '',
+      meaning: parts[2] || '',
+      section: parts[3] || ''
+    });
+  });
+  bulkPasteText.value = '';
+  bulkPasteBox.classList.add('hidden');
+});
+
+builderForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  builderError.textContent = '';
+
+  const title = builderTitle.value.trim();
+  if (!title) {
+    builderError.textContent = 'Please enter a deck title.';
+    return;
+  }
+
+  const enabledModes = {
+    flashcard: optFlashcard.checked,
+    spelling: optSpelling.checked,
+    speaking: optSpeaking.checked,
+    reverse: optReverse.checked
+  };
+  if (!enabledModes.flashcard && !enabledModes.spelling && !enabledModes.speaking) {
+    builderError.textContent = 'Enable at least one study mode (Flashcards, Spelling, or Speaking).';
+    return;
+  }
+
+  const cards = [];
+  Array.from(builderCardRows.children).forEach((row, idx) => {
+    const front = row.querySelector('.row-front').value.trim();
+    const back = row.querySelector('.row-back').value.trim();
+    const meaning = row.querySelector('.row-meaning').value.trim();
+    const section = row.querySelector('.row-section').value.trim();
+    if (!front && !back) return;
+    cards.push({
+      id: `c-${idx + 1}`,
+      front: front || back,
+      back: back || front,
+      meaning,
+      section: section || undefined
+    });
+  });
+
+  if (!cards.length) {
+    builderError.textContent = 'Add at least one card before saving.';
+    return;
+  }
+
+  const deckId = editingDeckId || `${slugify(title)}-${Date.now().toString(36)}`;
+  const rawDeck = {
+    id: deckId,
+    title,
+    subtitle: builderSubtitle.value.trim(),
+    language: builderLanguage.value,
+    frontLabel: builderFrontLabel.value.trim() || 'Front',
+    backLabel: builderBackLabel.value.trim() || 'Back',
+    accentSet: builderAccentSet.value,
+    enabledModes,
+    cards,
+    builtIn: false
+  };
+
+  try {
+    const normalized = normalizeDeck(rawDeck);
+    if (!userData.customDecks) userData.customDecks = {};
+    userData.customDecks[normalized.id] = normalized;
+    // Reset stale progress tracks for edited deck so new/edited cards appear
+    if (editingDeckId) {
+      Object.keys(userData.progress || {}).forEach((k) => {
+        if (k.startsWith(`${normalized.id}::`)) delete userData.progress[k];
+      });
+    }
+    setActiveSectionId(normalized.id, 'all');
+    persist();
+    closeDeckBuilder();
+    renderHome();
+    showHomeToast(`Saved "${normalized.title}" (${normalized.cards.length} cards).`);
+  } catch (err) {
+    builderError.textContent = err?.message || 'Could not save deck.';
+  }
+});
+
+/* ==================== ACCENT BAR (SPELLING MODE) ==================== */
+
+function renderAccentBar() {
+  const deck = getActiveDeck();
+  if (deck.accentSet === 'none') {
+    accentBarWrap.classList.add('hidden');
+    return;
+  }
+  accentBarWrap.classList.remove('hidden');
+
+  if (!accentPaletteSelect.options.length) {
+    accentPaletteSelect.innerHTML = Object.keys(ACCENT_PALETTES)
+      .map((key) => `<option value="${key}">${escapeHtml(ACCENT_PALETTES[key].label)}</option>`)
+      .join('');
+  }
+  if (!ACCENT_PALETTES[selectedAccentPalette]) {
+    selectedAccentPalette = 'pinyin';
+  }
+  accentPaletteSelect.value = selectedAccentPalette;
+
+  const palette = ACCENT_PALETTES[selectedAccentPalette];
+  accentKeys.innerHTML = palette.chars
+    .map((ch) => `<button type="button" class="accent-key" data-accent-char="${escapeHtml(ch)}">${escapeHtml(ch)}</button>`)
+    .join('');
+
+  accentKeys.querySelectorAll('[data-accent-char]').forEach((btn) => {
+    btn.addEventListener('mousedown', (e) => {
+      // Keep focus in the spelling input
+      e.preventDefault();
+    });
+    btn.addEventListener('click', () => {
+      insertCharAtCursor(spellingInput, btn.dataset.accentChar);
+    });
+  });
+}
+
+accentPaletteSelect.addEventListener('change', () => {
+  selectedAccentPalette = accentPaletteSelect.value;
+  renderAccentBar();
+  focusSpellingIfNeeded();
+});
+
 /* ==================== STUDY VIEW ==================== */
 
-function resetCardTransientState() {
-  flipped = false;
-  lastMovedUuid = null;
-  spellingResult = null;
-  spellingHintVisible = false;
-  spellingInput.value = '';
-  spellingInput.disabled = false;
+function populateStudyDropdowns() {
+  const decksMap = getDecksMap();
+  deckSelect.innerHTML = Object.keys(decksMap)
+    .map((id) => `<option value="${escapeHtml(id)}">${escapeHtml(decksMap[id].title)}</option>`)
+    .join('');
+  deckSelect.value = userData.activeDeckId;
+
+  const deck = getActiveDeck();
+  const hasSections = deck.sections && deck.sections.length > 1;
+  sectionSelect.classList.toggle('hidden', !hasSections);
+  if (hasSections) {
+    const activeSec = getActiveSectionId(deck);
+    sectionSelect.innerHTML = deck.sections
+      .map((s) => {
+        const count = getSectionCards(deck, s.id).length;
+        return `<option value="${escapeHtml(s.id)}">${escapeHtml(s.label)} (${count})</option>`;
+      })
+      .join('');
+    sectionSelect.value = activeSec;
+  }
 }
 
 function focusSpellingIfNeeded() {
@@ -484,71 +1046,89 @@ function focusSpellingIfNeeded() {
 }
 
 function renderStudy() {
+  const deck = getActiveDeck();
+  enforceDeckConstraints(deck);
   updateSegmentedControls();
   updateUserChrome();
 
-  deckSelect.value = userData.activeDeckId;
+  // Dynamic labels & visibility for deck-specific enabled modes
+  const modes = deck.enabledModes;
+  studyDirectionGroup.classList.toggle('hidden', !modes.reverse || userData.studyMode === 'speaking');
+  btnDirForward.textContent = `${deck.frontLabel} → ${deck.backLabel}`;
+  btnDirReverse.textContent = `${deck.backLabel} → ${deck.frontLabel}`;
+
+  btnModeFlashcard.classList.toggle('hidden', !modes.flashcard);
+  btnModeSpelling.classList.toggle('hidden', !modes.spelling);
+  btnModeSpeaking.classList.toggle('hidden', !modes.speaking);
+
+  deckSelect.value = deck.id;
+  if (deck.sections && deck.sections.length > 1) {
+    sectionSelect.value = getActiveSectionId(deck);
+  }
+
   userData.multiplier = Math.min(3.0, Math.max(1.1, Number(userData.multiplier) || 2.0));
   multiplierSlider.value = String(userData.multiplier);
   multiplierValue.textContent = userData.multiplier.toFixed(1) + '×';
 
-  const cards = getActiveDeckTrack();
+  const cards = getActiveTrack();
   const current = cards[0];
   const isReverse = userData.direction === 'reverse';
-  const isSpelling = userData.studyMode === 'spelling';
+  const mode = userData.studyMode;
 
-  // Toggle Flashcard vs Spelling panels
-  flashcardEl.classList.toggle('hidden', isSpelling);
-  spellingPanel.classList.toggle('hidden', !isSpelling);
+  flashcardEl.classList.toggle('hidden', mode !== 'flashcard');
+  spellingPanel.classList.toggle('hidden', mode !== 'spelling');
+  speakingPanel.classList.toggle('hidden', mode !== 'speaking');
 
   if (current) {
-    if (!isSpelling) {
-      // Flashcard Mode
-      frontDirectionPill.textContent = isReverse ? 'Hanzi → Pinyin' : 'Pinyin → Hanzi';
-      if (isReverse) {
-        frontMainEl.textContent = current.hanzi;
-        frontMainEl.className = 'card-hanzi card-hanzi-front';
-        frontSubEl.textContent = current.english;
-        frontSubEl.classList.remove('hidden');
+    if (mode === 'flashcard') {
+      frontDirectionPill.textContent = isReverse
+        ? `${deck.backLabel} → ${deck.frontLabel}`
+        : `${deck.frontLabel} → ${deck.backLabel}`;
 
-        backMainEl.textContent = current.pinyin;
+      if (isReverse) {
+        frontMainEl.textContent = current.back;
+        frontMainEl.className = 'card-hanzi card-hanzi-front';
+        frontSubEl.textContent = current.meaning;
+        frontSubEl.classList.toggle('hidden', !current.meaning);
+
+        backMainEl.textContent = current.front;
         backMainEl.className = 'card-pinyin';
-        backSubEl.textContent = current.hanzi;
-        backExtraEl.textContent = current.english;
-        backExtraEl.classList.remove('hidden');
+        backSubEl.textContent = current.back;
+        backExtraEl.textContent = current.meaning;
+        backExtraEl.classList.toggle('hidden', !current.meaning);
       } else {
-        frontMainEl.textContent = current.pinyin;
+        frontMainEl.textContent = current.front;
         frontMainEl.className = 'card-pinyin';
         frontSubEl.textContent = '';
         frontSubEl.classList.add('hidden');
 
-        backMainEl.textContent = current.hanzi;
+        backMainEl.textContent = current.back;
         backMainEl.className = 'card-hanzi';
-        backSubEl.textContent = current.english;
+        backSubEl.textContent = current.meaning;
         backExtraEl.textContent = '';
         backExtraEl.classList.add('hidden');
       }
       cardInnerEl.classList.toggle('is-flipped', flipped);
-    } else {
-      // Spelling Mode
-      spellingDirectionPill.textContent = isReverse ? 'Type Pinyin' : 'Type Hanzi';
+    } else if (mode === 'spelling') {
+      const targetLabel = isReverse ? deck.frontLabel : deck.backLabel;
+      spellingDirectionPill.textContent = `Type ${targetLabel}`;
       spellingInput.placeholder = isReverse
-        ? 'Type pinyin (e.g. jiating or jiātíng)…'
-        : 'Type hanzi (e.g. 家庭)…';
+        ? `Type ${deck.frontLabel}…`
+        : `Type ${deck.backLabel}…`;
 
       if (isReverse) {
-        spellingPromptMain.textContent = current.hanzi;
+        spellingPromptMain.textContent = current.back;
         spellingPromptMain.className = 'spelling-prompt-main is-hanzi';
-        spellingPromptSub.textContent = current.english;
-        spellingPromptSub.classList.remove('hidden');
+        spellingPromptSub.textContent = current.meaning;
+        spellingPromptSub.classList.toggle('hidden', !current.meaning);
         btnSpellingHint.classList.add('hidden');
       } else {
-        spellingPromptMain.textContent = current.pinyin;
+        spellingPromptMain.textContent = current.front;
         spellingPromptMain.className = 'spelling-prompt-main is-pinyin';
-        btnSpellingHint.classList.toggle('hidden', Boolean(spellingResult));
-        btnSpellingHint.textContent = spellingHintVisible ? 'Hide hint' : 'Show English hint';
-        spellingPromptSub.textContent = current.english;
-        spellingPromptSub.classList.toggle('hidden', !spellingHintVisible && !spellingResult);
+        btnSpellingHint.classList.toggle('hidden', !current.meaning || Boolean(spellingResult));
+        btnSpellingHint.textContent = spellingHintVisible ? 'Hide hint' : 'Show hint';
+        spellingPromptSub.textContent = current.meaning;
+        spellingPromptSub.classList.toggle('hidden', !current.meaning || (!spellingHintVisible && !spellingResult));
       }
 
       if (spellingResult) {
@@ -580,11 +1160,10 @@ function renderStudy() {
         }
 
         spellingFullCard.innerHTML = `
-          <span class="full-hanzi">${escapeHtml(current.hanzi)}</span>
+          <span class="full-hanzi">${escapeHtml(current.back)}</span>
           <span class="full-sep">·</span>
-          <span class="full-pinyin">${escapeHtml(current.pinyin)}</span>
-          <span class="full-sep">·</span>
-          <span class="full-english">${escapeHtml(current.english)}</span>
+          <span class="full-pinyin">${escapeHtml(current.front)}</span>
+          ${current.meaning ? `<span class="full-sep">·</span><span class="full-english">${escapeHtml(current.meaning)}</span>` : ''}
         `;
       } else {
         spellingInput.disabled = false;
@@ -592,18 +1171,72 @@ function renderStudy() {
         spellingFeedback.classList.add('hidden');
         spellingFeedback.classList.remove('is-correct', 'is-wrong');
       }
+    } else if (mode === 'speaking') {
+      // Show BOTH Hanzi (back) and Pinyin (front) + English meaning!
+      speakingPromptBack.textContent = current.back;
+      speakingPromptFront.textContent = current.front !== current.back ? current.front : '';
+      speakingPromptMeaning.textContent = current.meaning || '';
+
+      btnRecordVoice.classList.toggle('is-recording', isRecording);
+      btnRecordLabel.textContent = isRecording ? 'Stop Recording' : 'Record & Verify';
+      btnPlayRecording.disabled = !recordedAudioUrl || isRecording;
+
+      if (speakingResult) {
+        speakingFeedback.classList.remove('hidden', 'is-correct', 'is-wrong', 'is-close');
+        if (speakingResult.status === 'match') {
+          speakingFeedback.classList.add('is-correct');
+          speakingVerdict.textContent = `Verified Match (${speakingResult.score}%)`;
+          speakingComparison.innerHTML = `
+            <div class="comp-row"><span class="comp-label">Heard:</span> <strong>${escapeHtml(speakingResult.heard)}</strong></div>
+          `;
+          speakingShortcutHint.innerHTML =
+            'Press <kbd class="keycap">Enter</kbd> or <kbd class="keycap">J</kbd> for Right · <kbd class="keycap">K</kbd> for Wrong';
+        } else if (speakingResult.status === 'close') {
+          speakingFeedback.classList.add('is-close');
+          speakingVerdict.textContent = `Close (${speakingResult.score}%) — Listen & Decide`;
+          speakingComparison.innerHTML = `
+            <div class="comp-row"><span class="comp-label">Heard:</span> <strong>${escapeHtml(speakingResult.heard)}</strong></div>
+            <div class="comp-row"><span class="comp-label">Target:</span> <strong>${escapeHtml(speakingResult.target)}</strong></div>
+          `;
+          speakingShortcutHint.innerHTML =
+            'Listen to Reference vs Your Recording · Press <kbd class="keycap">J</kbd> if you got it right, or <kbd class="keycap">K</kbd> for Wrong';
+        } else if (speakingResult.status === 'mismatch') {
+          speakingFeedback.classList.add('is-wrong');
+          speakingVerdict.textContent = `Not a match (${speakingResult.score}%)`;
+          speakingComparison.innerHTML = `
+            <div class="comp-row"><span class="comp-label">Heard:</span> <strong>${escapeHtml(speakingResult.heard)}</strong></div>
+            <div class="comp-row"><span class="comp-label">Target:</span> <strong>${escapeHtml(speakingResult.target)}</strong></div>
+          `;
+          speakingShortcutHint.innerHTML =
+            'Press <kbd class="keycap">K</kbd> for Wrong · Actually said it right? Press <kbd class="keycap">J</kbd>';
+        } else {
+          speakingFeedback.classList.add('is-close');
+          speakingVerdict.textContent = speakingResult.recognitionAvailable
+            ? 'Recording saved (no speech text detected)'
+            : 'Recording saved (manual comparison)';
+          speakingComparison.innerHTML = `
+            <div class="spelling-note">Play Reference and Play My Recording above to compare your pronunciation, then grade yourself with J or K.</div>
+          `;
+          speakingShortcutHint.innerHTML =
+            'Press <kbd class="keycap">J</kbd> if you got it right · <kbd class="keycap">K</kbd> for Wrong';
+        }
+      } else {
+        speakingFeedback.classList.add('hidden');
+      }
     }
   }
 
-  // Update Right / Wrong button labels (highlight override when spelling missed)
-  const isSpellingOverride = isSpelling && spellingResult && !spellingResult.isCorrect;
-  btnRightLabel.textContent = isSpellingOverride ? 'I got it right' : 'Right';
+  // Highlight "I got it right [J]" override when spelling or speaking didn't auto-pass
+  const isOverride =
+    (mode === 'spelling' && spellingResult && !spellingResult.isCorrect) ||
+    (mode === 'speaking' && speakingResult && !speakingResult.isCorrect);
+  btnRightLabel.textContent = isOverride ? 'I got it right' : 'Right';
   btnWrongLabel.textContent = 'Wrong';
-  btnRight.classList.toggle('btn-override', Boolean(isSpellingOverride));
+  btnRight.classList.toggle('btn-override', Boolean(isOverride));
 
   btnUndo.disabled = getUndoStack().length === 0;
 
-  // Render linear queue (shows prompt side so reverse mode doesn't spoil pinyin)
+  // Render linear queue
   queueGrid.innerHTML = cards
     .map((card, idx) => {
       const pos = idx + 1;
@@ -616,7 +1249,7 @@ function renderStudy() {
       else if (card.correct >= 1) classes.push('streak-1');
       if (card.uuid === lastMovedUuid) classes.push('is-moved');
 
-      const word = isReverse ? card.hanzi : card.pinyin;
+      const word = isReverse || mode === 'speaking' ? card.back : card.front;
       return (
         `<div class="${classes.join(' ')}">` +
         `<div class="slot-num">#${pos}</div>` +
@@ -634,12 +1267,12 @@ function flipCard() {
 }
 
 function checkCurrentSpelling() {
-  const cards = getActiveDeckTrack();
-  const current = cards[0];
+  const deck = getActiveDeck();
+  const current = getActiveTrack()[0];
   if (!current) return;
 
   const typed = spellingInput.value.trim();
-  const res = checkSpellingAnswer(typed, current, userData.direction);
+  const res = checkSpellingAnswer(typed, current, userData.direction, deck);
   spellingResult = {
     isCorrect: res.isCorrect,
     typed,
@@ -650,9 +1283,77 @@ function checkCurrentSpelling() {
   renderStudy();
 }
 
+async function toggleVoiceRecording() {
+  const deck = getActiveDeck();
+  const current = getActiveTrack()[0];
+  if (!current) return;
+
+  if (isRecording && speakingSession) {
+    speakingSession.stop();
+    return;
+  }
+
+  if (!isMediaRecorderSupported && !isSpeechRecognitionSupported) {
+    speakingError.textContent = 'Voice recording is not supported in this browser. Try Chrome, Edge, or Safari.';
+    return;
+  }
+
+  speakingError.textContent = '';
+  speakingResult = null;
+  if (recordedAudioUrl) {
+    URL.revokeObjectURL(recordedAudioUrl);
+    recordedAudioUrl = null;
+  }
+
+  isRecording = true;
+  speakingLiveBox.classList.remove('hidden');
+  speakingLiveText.textContent = 'Listening… speak clearly now.';
+  renderStudy();
+
+  const session = await startSpeakingSession({
+    lang: deck.language || 'zh-CN',
+    onInterim: (text) => {
+      speakingLiveText.textContent = `Hearing: "${text}"`;
+    },
+    onComplete: ({ audioUrl, transcripts, recognitionAvailable }) => {
+      isRecording = false;
+      speakingSession = null;
+      speakingLiveBox.classList.add('hidden');
+      recordedAudioUrl = audioUrl || null;
+      const verified = verifySpokenAnswer(transcripts, current, deck);
+      speakingResult = { ...verified, recognitionAvailable };
+      renderStudy();
+    },
+    onError: (msg) => {
+      isRecording = false;
+      speakingSession = null;
+      speakingLiveBox.classList.add('hidden');
+      speakingError.textContent = msg;
+      renderStudy();
+    }
+  });
+
+  if (session) {
+    speakingSession = session;
+  }
+}
+
+async function handlePlayReference(slow = false) {
+  const deck = getActiveDeck();
+  const current = getActiveTrack()[0];
+  if (!current) return;
+  try {
+    await playReferenceAudio(current, deck, { slow });
+  } catch (err) {
+    speakingError.textContent = err?.message || 'Unable to play reference audio.';
+  }
+}
+
 function answer(isRight) {
-  const cards = getActiveDeckTrack();
+  const cards = getActiveTrack();
   if (!cards.length) return;
+
+  stopActiveRecordingAndAudio();
 
   const stack = getUndoStack();
   stack.push({
@@ -663,13 +1364,9 @@ function answer(isRight) {
   if (stack.length > 200) stack.shift();
 
   const result = step(cards, isRight, userData.multiplier);
-  setActiveDeckTrack(result.cards);
+  setActiveTrack(result.cards);
+  resetCardTransientState();
   lastMovedUuid = result.movedUuid;
-  flipped = false;
-  spellingResult = null;
-  spellingHintVisible = false;
-  spellingInput.value = '';
-  spellingInput.disabled = false;
 
   persist();
   renderStudy();
@@ -679,14 +1376,12 @@ function answer(isRight) {
 function undo() {
   const stack = getUndoStack();
   if (!stack.length) return;
+  stopActiveRecordingAndAudio();
   const prev = stack.pop();
-  setActiveDeckTrack(prev.cards);
+  setActiveTrack(prev.cards);
+  resetCardTransientState();
   flipped = prev.flipped;
   lastMovedUuid = prev.lastMovedUuid;
-  spellingResult = null;
-  spellingHintVisible = false;
-  spellingInput.value = '';
-  spellingInput.disabled = false;
 
   persist();
   renderStudy();
@@ -694,14 +1389,16 @@ function undo() {
 }
 
 function resetCurrentDeck() {
-  const cards = getActiveDeckTrack();
+  const deck = getActiveDeck();
+  const sec = getActiveSectionId(deck);
+  const cards = getActiveTrack();
   const stack = getUndoStack();
   stack.push({
     cards: cards.map((c) => ({ ...c })),
     flipped,
     lastMovedUuid
   });
-  setActiveDeckTrack(createDeckCards(SRS_DECKS[userData.activeDeckId].cards));
+  setActiveTrack(createDeckCards(getSectionCards(deck, sec)));
   resetCardTransientState();
   persist();
   renderStudy();
@@ -710,7 +1407,6 @@ function resetCurrentDeck() {
 
 /* ==================== EVENT LISTENERS ==================== */
 
-// Direction & Mode segmented controls (synced across Home and Study views)
 document.querySelectorAll('[data-direction]').forEach((btn) => {
   btn.addEventListener('click', () => {
     const nextDir = btn.dataset.direction;
@@ -741,12 +1437,27 @@ document.querySelectorAll('[data-mode]').forEach((btn) => {
   });
 });
 
-btnBackHome.addEventListener('click', () => {
-  showView('home');
-});
+btnBackHome.addEventListener('click', () => showView('home'));
 
 deckSelect.addEventListener('change', () => {
   userData.activeDeckId = deckSelect.value;
+  const deck = getActiveDeck();
+  enforceDeckConstraints(deck);
+  selectedAccentPalette =
+    deck.accentSet && ACCENT_PALETTES[deck.accentSet]
+      ? deck.accentSet
+      : inferAccentSet(deck.language);
+  resetCardTransientState();
+  populateStudyDropdowns();
+  renderAccentBar();
+  persist();
+  renderStudy();
+  focusSpellingIfNeeded();
+});
+
+sectionSelect.addEventListener('change', () => {
+  const deck = getActiveDeck();
+  setActiveSectionId(deck.id, sectionSelect.value);
   resetCardTransientState();
   persist();
   renderStudy();
@@ -764,12 +1475,25 @@ multiplierSlider.addEventListener('input', () => {
   persist();
 });
 
+// Audio & Speaking buttons
+btnFlashcardAudioFront.addEventListener('click', (e) => {
+  e.stopPropagation();
+  handlePlayReference(false);
+});
+btnFlashcardAudioBack.addEventListener('click', (e) => {
+  e.stopPropagation();
+  handlePlayReference(false);
+});
+btnSpellingAudio.addEventListener('click', () => handlePlayReference(false));
+btnRecordVoice.addEventListener('click', toggleVoiceRecording);
+btnPlayReference.addEventListener('click', () => handlePlayReference(false));
+btnPlayReferenceSlow.addEventListener('click', () => handlePlayReference(true));
+btnPlayRecording.addEventListener('click', () => playAudioUrl(recordedAudioUrl));
+
 // Spelling form & hint
 spellingForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  if (!spellingResult) {
-    checkCurrentSpelling();
-  }
+  if (!spellingResult) checkCurrentSpelling();
 });
 
 btnSpellingHint.addEventListener('click', () => {
@@ -836,8 +1560,12 @@ flashcardEl.addEventListener('touchend', () => {
   touchDeltaX = 0;
 });
 
-// Keyboard shortcuts (Study view only)
+// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+  if (!builderModal.classList.contains('hidden')) {
+    if (e.key === 'Escape') closeDeckBuilder();
+    return;
+  }
   if (currentView !== 'study') return;
 
   const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
@@ -867,7 +1595,27 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Flashcard mode shortcuts
+  if (userData.studyMode === 'speaking') {
+    if (e.key === ' ') {
+      e.preventDefault();
+      toggleVoiceRecording();
+    } else if (key === 'j') {
+      e.preventDefault();
+      answer(true);
+    } else if (key === 'k') {
+      e.preventDefault();
+      answer(false);
+    } else if (e.key === 'Enter' && speakingResult) {
+      e.preventDefault();
+      answer(speakingResult.isCorrect);
+    } else if (key === 'u') {
+      e.preventDefault();
+      undo();
+    }
+    return;
+  }
+
+  // Flashcard mode
   if (e.key === ' ') {
     e.preventDefault();
     flipCard();
@@ -885,9 +1633,7 @@ document.addEventListener('keydown', (e) => {
 
 // Flush pending cloud sync when leaving or hiding tab
 window.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    cloudSyncer.flush();
-  }
+  if (document.visibilityState === 'hidden') cloudSyncer.flush();
 });
 window.addEventListener('beforeunload', () => {
   cloudSyncer.flush();
@@ -896,7 +1642,6 @@ window.addEventListener('beforeunload', () => {
 /* ==================== BOOTSTRAP ==================== */
 
 async function init() {
-  populateDeckDropdown();
   renderAuthForm();
 
   if (isSupabaseConfigured && supabase) {

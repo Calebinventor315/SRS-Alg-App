@@ -1,5 +1,5 @@
 {
-  "name": "chinese-srs",
+  "name": "srs-learning",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -17,6 +17,7 @@
     "vite": "^8.3.8"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.119.2"
+    "@supabase/supabase-js": "^2.119.2",
+    "jszip": "^3.10.2"
   }
 }

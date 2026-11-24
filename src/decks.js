@@ -1,146 +1,285 @@
-/* Unit 4 Vocabulary Decks — Edit or add decks here */
+/* Built-in Decks & Universal Deck Schema */
 
 const SET_1 = [
-  { pinyin: 'jiātíng', hanzi: '家庭', english: 'family' },
-  { pinyin: 'kǒu', hanzi: '口', english: '[measure word for people]' },
-  { pinyin: 'bàba', hanzi: '爸爸', english: 'dad' },
-  { pinyin: 'māma', hanzi: '妈妈', english: 'mom' },
-  { pinyin: 'gēge', hanzi: '哥哥', english: 'older brother' },
-  { pinyin: 'dìdi', hanzi: '弟弟', english: 'younger brother' },
-  { pinyin: 'jiějie', hanzi: '姐姐', english: 'older sister' },
-  { pinyin: 'mèimei', hanzi: '妹妹', english: 'younger sister' }
+  { front: 'jiātíng', back: '家庭', meaning: 'family', section: 'set1' },
+  { front: 'kǒu', back: '口', meaning: '[measure word for people]', sections: ['set1', 'measure'] },
+  { front: 'bàba', back: '爸爸', meaning: 'dad', section: 'set1' },
+  { front: 'māma', back: '妈妈', meaning: 'mom', section: 'set1' },
+  { front: 'gēge', back: '哥哥', meaning: 'older brother', section: 'set1' },
+  { front: 'dìdi', back: '弟弟', meaning: 'younger brother', section: 'set1' },
+  { front: 'jiějie', back: '姐姐', meaning: 'older sister', section: 'set1' },
+  { front: 'mèimei', back: '妹妹', meaning: 'younger sister', section: 'set1' }
 ];
 
 const SET_2 = [
-  { pinyin: 'āyí', hanzi: '阿姨', english: 'aunt (maternal, younger than mom)' },
-  { pinyin: 'shūshu', hanzi: '叔叔', english: 'paternal uncle (younger than dad)' },
-  { pinyin: 'biǎodì', hanzi: '表弟', english: 'maternal male cousin (younger)' },
-  { pinyin: 'biǎomèi', hanzi: '表妹', english: 'maternal female cousin (younger)' },
-  { pinyin: 'yéye', hanzi: '爷爷', english: 'grandpa (paternal)' },
-  { pinyin: 'nǎinai', hanzi: '奶奶', english: 'grandma (paternal)' },
-  { pinyin: 'sūnzi', hanzi: '孙子', english: 'grandson (paternal)' },
-  { pinyin: 'sūnnǚ', hanzi: '孙女', english: 'granddaughter (paternal)' }
+  { front: 'āyí', back: '阿姨', meaning: 'aunt (maternal, younger than mom)', section: 'set2' },
+  { front: 'shūshu', back: '叔叔', meaning: 'paternal uncle (younger than dad)', section: 'set2' },
+  { front: 'biǎodì', back: '表弟', meaning: 'maternal male cousin (younger)', section: 'set2' },
+  { front: 'biǎomèi', back: '表妹', meaning: 'maternal female cousin (younger)', section: 'set2' },
+  { front: 'yéye', back: '爷爷', meaning: 'grandpa (paternal)', section: 'set2' },
+  { front: 'nǎinai', back: '奶奶', meaning: 'grandma (paternal)', section: 'set2' },
+  { front: 'sūnzi', back: '孙子', meaning: 'grandson (paternal)', section: 'set2' },
+  { front: 'sūnnǚ', back: '孙女', meaning: 'granddaughter (paternal)', section: 'set2' }
 ];
 
 const SET_3 = [
-  { pinyin: 'zhàngfu', hanzi: '丈夫', english: 'husband' },
-  { pinyin: 'qīzi', hanzi: '妻子', english: 'wife' },
-  { pinyin: 'érzi', hanzi: '儿子', english: 'son' },
-  { pinyin: "nǚ'ér", hanzi: '女儿', english: 'daughter' },
-  { pinyin: "yīng'ér", hanzi: '婴儿', english: 'baby' },
-  { pinyin: 'jiéhūn', hanzi: '结婚', english: 'get married' }
+  { front: 'zhàngfu', back: '丈夫', meaning: 'husband', section: 'set3' },
+  { front: 'qīzi', back: '妻子', meaning: 'wife', section: 'set3' },
+  { front: 'érzi', back: '儿子', meaning: 'son', section: 'set3' },
+  { front: "nǚ'ér", back: '女儿', meaning: 'daughter', section: 'set3' },
+  { front: "yīng'ér", back: '婴儿', meaning: 'baby', section: 'set3' },
+  { front: 'jiéhūn', back: '结婚', meaning: 'get married', section: 'set3' }
 ];
 
 const SET_4 = [
-  { pinyin: 'péngyǒu', hanzi: '朋友', english: 'friend' },
-  { pinyin: 'nánhái', hanzi: '男孩', english: 'boy' },
-  { pinyin: 'nǚhái', hanzi: '女孩', english: 'girl' },
-  { pinyin: 'háizi', hanzi: '孩子', english: 'child' },
-  { pinyin: 'xiānsheng', hanzi: '先生', english: 'Mr.' },
-  { pinyin: 'nǚshì', hanzi: '女士', english: 'Mrs.' },
-  { pinyin: 'nánrén', hanzi: '男人', english: 'man' },
-  { pinyin: 'nǚrén', hanzi: '女人', english: 'woman' }
+  { front: 'péngyǒu', back: '朋友', meaning: 'friend', section: 'set4' },
+  { front: 'nánhái', back: '男孩', meaning: 'boy', section: 'set4' },
+  { front: 'nǚhái', back: '女孩', meaning: 'girl', section: 'set4' },
+  { front: 'háizi', back: '孩子', meaning: 'child', section: 'set4' },
+  { front: 'xiānsheng', back: '先生', meaning: 'Mr.', section: 'set4' },
+  { front: 'nǚshì', back: '女士', meaning: 'Mrs.', section: 'set4' },
+  { front: 'nánrén', back: '男人', meaning: 'man', section: 'set4' },
+  { front: 'nǚrén', back: '女人', meaning: 'woman', section: 'set4' }
 ];
 
 const MEASURE_GRAMMAR = [
-  { pinyin: 'ge', hanzi: '个', english: 'general measure word for people' },
-  { pinyin: 'wèi', hanzi: '位', english: 'polite measure word for people' },
-  { pinyin: 'kǒu', hanzi: '口', english: 'measure word for family members' },
-  { pinyin: 'ma', hanzi: '吗', english: 'yes/no question particle' }
+  { front: 'ge', back: '个', meaning: 'general measure word for people', section: 'measure' },
+  { front: 'wèi', back: '位', meaning: 'polite measure word for people', section: 'measure' },
+  { front: 'ma', back: '吗', meaning: 'yes/no question particle', section: 'measure' }
 ];
 
 const PHRASES = [
-  { pinyin: 'nǚpéngyǒu', hanzi: '女朋友', english: 'girlfriend' },
-  { pinyin: 'huí jiā', hanzi: '回家', english: 'to go back home' },
-  { pinyin: 'wèishénme', hanzi: '为什么', english: 'why?' },
-  { pinyin: 'yīnggāi huì', hanzi: '应该会', english: 'should be' },
-  { pinyin: 'shùxué bǐsài', hanzi: '数学比赛', english: 'math competition' },
-  { pinyin: 'dé le', hanzi: '得了', english: 'got / won' },
-  { pinyin: 'dì èr míng', hanzi: '第二名', english: 'second place' },
-  { pinyin: 'liù gè yuè', hanzi: '六个月', english: 'six months' },
-  { pinyin: 'xìngfú', hanzi: '幸福', english: 'happy' },
-  { pinyin: 'qǐng wèn', hanzi: '请问', english: 'excuse me / may I ask' },
-  { pinyin: 'dìtiě', hanzi: '地铁', english: 'subway' },
-  { pinyin: 'zěnme zǒu', hanzi: '怎么走', english: 'how to get to' },
-  { pinyin: 'hěn máng', hanzi: '很忙', english: 'very busy' },
-  { pinyin: 'shēngrì', hanzi: '生日', english: 'birthday' },
-  { pinyin: 'duōdà', hanzi: '多大', english: 'how old' },
-  { pinyin: 'shēntǐ', hanzi: '身体', english: 'body / health' },
-  { pinyin: 'jiànkāng', hanzi: '健康', english: 'healthy' },
-  { pinyin: 'quán jiā zhào', hanzi: '全家照', english: 'family photo' },
-  { pinyin: 'shuài', hanzi: '帅', english: 'handsome' },
-  { pinyin: 'wēnróu', hanzi: '温柔', english: 'gentle' },
-  { pinyin: 'fēnshǒu', hanzi: '分手', english: 'break up' },
-  { pinyin: 'zhōumò', hanzi: '周末', english: 'weekend' },
-  { pinyin: 'kàn diànyǐng', hanzi: '看电影', english: 'watch a movie' },
-  { pinyin: 'jiārén', hanzi: '家人', english: 'family members' },
-  { pinyin: 'běn', hanzi: '本', english: 'measure word for books' },
-  { pinyin: 'zhāng', hanzi: '张', english: 'measure word for flat objects' },
-  { pinyin: 'zhī', hanzi: '支', english: 'measure word for stick-like objects' },
-  { pinyin: 'yǐjīng', hanzi: '已经', english: 'already' },
-  { pinyin: 'shēng bìng', hanzi: '生病', english: 'get sick' },
-  { pinyin: 'cānjiā', hanzi: '参加', english: 'attend / participate in' },
-  { pinyin: 'hūnlǐ', hanzi: '婚礼', english: 'wedding' },
-  { pinyin: 'guò shēngrì', hanzi: '过生日', english: 'celebrate a birthday' }
+  { front: 'nǚpéngyǒu', back: '女朋友', meaning: 'girlfriend', section: 'phrases' },
+  { front: 'huí jiā', back: '回家', meaning: 'to go back home', section: 'phrases' },
+  { front: 'wèishénme', back: '为什么', meaning: 'why?', section: 'phrases' },
+  { front: 'yīnggāi huì', back: '应该会', meaning: 'should be', section: 'phrases' },
+  { front: 'shùxué bǐsài', back: '数学比赛', meaning: 'math competition', section: 'phrases' },
+  { front: 'dé le', back: '得了', meaning: 'got / won', section: 'phrases' },
+  { front: 'dì èr míng', back: '第二名', meaning: 'second place', section: 'phrases' },
+  { front: 'liù gè yuè', back: '六个月', meaning: 'six months', section: 'phrases' },
+  { front: 'xìngfú', back: '幸福', meaning: 'happy', section: 'phrases' },
+  { front: 'qǐng wèn', back: '请问', meaning: 'excuse me / may I ask', section: 'phrases' },
+  { front: 'dìtiě', back: '地铁', meaning: 'subway', section: 'phrases' },
+  { front: 'zěnme zǒu', back: '怎么走', meaning: 'how to get to', section: 'phrases' },
+  { front: 'hěn máng', back: '很忙', meaning: 'very busy', section: 'phrases' },
+  { front: 'shēngrì', back: '生日', meaning: 'birthday', section: 'phrases' },
+  { front: 'duōdà', back: '多大', meaning: 'how old', section: 'phrases' },
+  { front: 'shēntǐ', back: '身体', meaning: 'body / health', section: 'phrases' },
+  { front: 'jiànkāng', back: '健康', meaning: 'healthy', section: 'phrases' },
+  { front: 'quán jiā zhào', back: '全家照', meaning: 'family photo', section: 'phrases' },
+  { front: 'shuài', back: '帅', meaning: 'handsome', section: 'phrases' },
+  { front: 'wēnróu', back: '温柔', meaning: 'gentle', section: 'phrases' },
+  { front: 'fēnshǒu', back: '分手', meaning: 'break up', section: 'phrases' },
+  { front: 'zhōumò', back: '周末', meaning: 'weekend', section: 'phrases' },
+  { front: 'kàn diànyǐng', back: '看电影', meaning: 'watch a movie', section: 'phrases' },
+  { front: 'jiārén', back: '家人', meaning: 'family members', section: 'phrases' },
+  { front: 'běn', back: '本', meaning: 'measure word for books', section: 'phrases' },
+  { front: 'zhāng', back: '张', meaning: 'measure word for flat objects', section: 'phrases' },
+  { front: 'zhī', back: '支', meaning: 'measure word for stick-like objects', section: 'phrases' },
+  { front: 'yǐjīng', back: '已经', meaning: 'already', section: 'phrases' },
+  { front: 'shēng bìng', back: '生病', meaning: 'get sick', section: 'phrases' },
+  { front: 'cānjiā', back: '参加', meaning: 'attend / participate in', section: 'phrases' },
+  { front: 'hūnlǐ', back: '婚礼', meaning: 'wedding', section: 'phrases' },
+  { front: 'guò shēngrì', back: '过生日', meaning: 'celebrate a birthday', section: 'phrases' }
 ];
 
-// Combine without duplicating 口
-const WHOLE = SET_1.concat(
-  SET_2,
-  SET_3,
-  SET_4,
-  MEASURE_GRAMMAR.filter((item) => item.hanzi !== '口'),
-  PHRASES
+const UNIT_4_CARDS = [...SET_1, ...SET_2, ...SET_3, ...SET_4, ...MEASURE_GRAMMAR, ...PHRASES].map(
+  (card, i) => ({
+    id: `u4-${i + 1}`,
+    front: card.front,
+    back: card.back,
+    meaning: card.meaning,
+    speechText: card.back,
+    section: card.section || 'set1',
+    sections: card.sections || [card.section || 'set1'],
+    audio: null
+  })
 );
 
-export const SRS_DECKS = {
-  whole: {
-    id: 'whole',
-    title: 'Whole Unit 4',
-    subtitle: 'Complete vocabulary & dialogue phrases',
-    label: `Whole Unit 4 (${WHOLE.length})`,
-    cards: WHOLE
-  },
-  set1: {
-    id: 'set1',
-    title: 'Set 1 · Immediate Family',
-    subtitle: 'Parents, siblings, and family',
-    label: `Set 1 · Immediate Family (${SET_1.length})`,
-    cards: SET_1
-  },
-  set2: {
-    id: 'set2',
-    title: 'Set 2 · Extended Family',
-    subtitle: 'Aunts, uncles, cousins, grandparents',
-    label: `Set 2 · Extended Family (${SET_2.length})`,
-    cards: SET_2
-  },
-  set3: {
-    id: 'set3',
-    title: 'Set 3 · Marriage & Children',
-    subtitle: 'Spouses, children, and getting married',
-    label: `Set 3 · Marriage & Children (${SET_3.length})`,
-    cards: SET_3
-  },
-  set4: {
-    id: 'set4',
-    title: 'Set 4 · People & Friends',
-    subtitle: 'Friends, boys, girls, and titles',
-    label: `Set 4 · People & Friends (${SET_4.length})`,
-    cards: SET_4
-  },
-  measure: {
-    id: 'measure',
-    title: 'Measure Words & Grammar',
-    subtitle: 'Core classifiers and particles',
-    label: `Measure Words & Grammar (${MEASURE_GRAMMAR.length})`,
-    cards: MEASURE_GRAMMAR
-  },
-  phrases: {
-    id: 'phrases',
-    title: 'Glossed & Dialogue Phrases',
-    subtitle: 'Everyday expressions and sentences',
-    label: `Glossed & Dialogue Phrases (${PHRASES.length})`,
-    cards: PHRASES
+export const BUILTIN_DECKS = {
+  'chinese-unit-4': {
+    id: 'chinese-unit-4',
+    title: 'Chinese — Unit 4',
+    subtitle: 'Family, People, Measure Words & Dialogue Phrases',
+    language: 'zh-CN',
+    frontLabel: 'Pinyin',
+    backLabel: 'Hanzi',
+    accentSet: 'pinyin',
+    builtIn: true,
+    enabledModes: {
+      flashcard: true,
+      spelling: true,
+      speaking: true,
+      reverse: true
+    },
+    sections: [
+      { id: 'all', label: 'All Cards' },
+      { id: 'set1', label: 'Set 1 · Immediate Family' },
+      { id: 'set2', label: 'Set 2 · Extended Family' },
+      { id: 'set3', label: 'Set 3 · Marriage & Children' },
+      { id: 'set4', label: 'Set 4 · People & Friends' },
+      { id: 'measure', label: 'Measure Words & Grammar' },
+      { id: 'phrases', label: 'Glossed & Dialogue Phrases' }
+    ],
+    cards: UNIT_4_CARDS
   }
 };
+
+export function inferAccentSet(language) {
+  const lang = String(language || '').toLowerCase();
+  if (lang.startsWith('zh')) return 'pinyin';
+  if (lang.startsWith('es')) return 'spanish';
+  if (lang.startsWith('fr')) return 'french';
+  if (lang.startsWith('de')) return 'german';
+  if (lang.startsWith('pt') || lang.startsWith('it')) return 'portuguese';
+  return 'european';
+}
+
+export function slugify(text) {
+  return (
+    String(text || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40) || 'deck'
+  );
+}
+
+/**
+ * Normalize a raw deck definition (from Deck Builder or .zip/.json import)
+ * into the canonical internal format.
+ */
+export function normalizeDeck(raw) {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Deck JSON must be an object.');
+  }
+
+  const title = String(raw.title || raw.name || 'Untitled Deck').trim();
+  const id = String(raw.id || `${slugify(title)}-${Date.now().toString(36)}`).trim();
+  const language = String(raw.language || 'en-US').trim();
+  const accentSet = raw.accentSet || inferAccentSet(language);
+  const frontLabel = String(raw.frontLabel || (language.toLowerCase().startsWith('zh') ? 'Pinyin' : 'Front')).trim();
+  const backLabel = String(raw.backLabel || (language.toLowerCase().startsWith('zh') ? 'Hanzi' : 'Back')).trim();
+
+  const rawModes = raw.enabledModes || raw.modes || {};
+  const enabledModes = {
+    flashcard: rawModes.flashcard !== false,
+    spelling: rawModes.spelling !== false,
+    speaking: rawModes.speaking !== false,
+    reverse: rawModes.reverse !== false
+  };
+  // Ensure at least one primary study mode is enabled
+  if (!enabledModes.flashcard && !enabledModes.spelling && !enabledModes.speaking) {
+    enabledModes.flashcard = true;
+  }
+
+  const rawCards = Array.isArray(raw.cards) ? raw.cards : [];
+  if (!rawCards.length) {
+    throw new Error('Deck must contain at least one card.');
+  }
+
+  const discoveredSections = new Map();
+  if (Array.isArray(raw.sections)) {
+    raw.sections.forEach((sec) => {
+      if (typeof sec === 'string') {
+        const sid = slugify(sec);
+        if (sid !== 'all') discoveredSections.set(sid, sec.trim());
+      } else if (sec && typeof sec === 'object' && sec.id && sec.id !== 'all') {
+        discoveredSections.set(String(sec.id), String(sec.label || sec.name || sec.id));
+      }
+    });
+  }
+
+  const cards = rawCards
+    .map((c, idx) => {
+      const front = String(c.front ?? c.pinyin ?? c.prompt ?? c.term ?? '').trim();
+      const back = String(c.back ?? c.hanzi ?? c.answer ?? c.definition ?? '').trim();
+      const meaning = String(c.meaning ?? c.english ?? c.notes ?? c.hint ?? '').trim();
+      if (!front && !back) return null;
+
+      let secList = [];
+      if (Array.isArray(c.sections) && c.sections.length) {
+        secList = c.sections.map((s) => {
+          const sid = slugify(s);
+          if (sid !== 'all' && !discoveredSections.has(sid)) {
+            discoveredSections.set(sid, String(s).trim());
+          }
+          return sid;
+        });
+      } else if (c.section) {
+        const rawSec = String(c.section).trim();
+        const sid = discoveredSections.has(rawSec) ? rawSec : slugify(rawSec);
+        if (sid !== 'all' && !discoveredSections.has(sid)) {
+          discoveredSections.set(sid, rawSec);
+        }
+        secList = [sid];
+      }
+
+      const speechText = String(
+        c.speechText ??
+          c.speech ??
+          (language.toLowerCase().startsWith('zh') ? back || front : front || back)
+      ).trim();
+
+      return {
+        id: String(c.id || `card-${idx + 1}`),
+        front: front || back,
+        back: back || front,
+        meaning,
+        speechText,
+        section: secList[0] || 'all',
+        sections: secList.length ? secList : ['all'],
+        audio: c.audio ? String(c.audio).trim() : null
+      };
+    })
+    .filter(Boolean);
+
+  if (!cards.length) {
+    throw new Error('No valid cards found in deck.');
+  }
+
+  const sections = [{ id: 'all', label: 'All Cards' }];
+  discoveredSections.forEach((label, secId) => {
+    sections.push({ id: secId, label });
+  });
+
+  return {
+    id,
+    title,
+    subtitle: String(raw.subtitle || raw.description || '').trim(),
+    language,
+    frontLabel,
+    backLabel,
+    accentSet,
+    builtIn: Boolean(raw.builtIn),
+    enabledModes,
+    sections,
+    cards
+  };
+}
+
+export function getSectionCards(deck, sectionId) {
+  if (!deck || !Array.isArray(deck.cards)) return [];
+  if (!sectionId || sectionId === 'all') return deck.cards;
+  return deck.cards.filter((card) => {
+    if (Array.isArray(card.sections) && card.sections.includes(sectionId)) return true;
+    return card.section === sectionId;
+  });
+}
+
+export function getAllDecks(userData) {
+  const result = {};
+  Object.keys(BUILTIN_DECKS).forEach((id) => {
+    result[id] = BUILTIN_DECKS[id];
+  });
+  if (userData && userData.customDecks) {
+    Object.keys(userData.customDecks).forEach((id) => {
+      try {
+        result[id] = normalizeDeck({ ...userData.customDecks[id], id, builtIn: false });
+      } catch {
+        // Skip invalid custom deck
+      }
+    });
+  }
+  return result;
+}

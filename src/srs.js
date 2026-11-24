@@ -16,9 +16,13 @@ function makeUuid() {
 export function createDeckCards(rawCards) {
   return rawCards.map((item) => ({
     uuid: makeUuid(),
-    pinyin: item.pinyin,
-    hanzi: item.hanzi,
-    english: item.english,
+    id: item.id || null,
+    front: item.front ?? item.pinyin ?? '',
+    back: item.back ?? item.hanzi ?? '',
+    meaning: item.meaning ?? item.english ?? '',
+    speechText: item.speechText ?? item.back ?? item.hanzi ?? item.front ?? '',
+    audio: item.audio || null,
+    section: item.section || 'all',
     correct: 0
   }));
 }

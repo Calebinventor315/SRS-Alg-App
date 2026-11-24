@@ -1161,3 +1161,526 @@ input[type="range"]::-moz-range-thumb {
     flex-direction: column;
   }
 }
+
+/* ==================== Home Actions, Toast, & Rich Deck Cards ==================== */
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.mode-bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-toast {
+  background: #e1efe6;
+  border: 1px solid #accbb7;
+  color: #245238;
+  border-radius: var(--radius-md);
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.home-toast.is-error {
+  background: var(--wrong-bg);
+  border-color: var(--wrong-border);
+  color: var(--wrong-ink);
+}
+
+.deck-card-rich {
+  cursor: default;
+}
+
+.deck-card-rich:hover {
+  transform: none;
+}
+
+.deck-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lang-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: var(--surface-muted);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.deck-mode-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mode-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+
+.deck-section-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.deck-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.deck-select-sm {
+  padding: 6px 10px;
+  font-size: 13px;
+  flex: 1;
+  min-width: 170px;
+}
+
+.deck-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-sm {
+  padding: 8px 13px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+}
+
+.btn-xs {
+  padding: 6px 9px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.btn-danger-text {
+  color: var(--wrong-ink);
+}
+
+/* ==================== Card Audio Chip ==================== */
+.card-face-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.card-face-actions .keycap {
+  margin-left: 0;
+}
+
+.btn-audio-chip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+
+.btn-audio-chip:hover {
+  background: var(--surface-muted);
+}
+
+.btn-audio-chip-dark {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #f6f4ef;
+}
+
+.btn-audio-chip-dark:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ==================== Clickable Accent & Tone Bar ==================== */
+.accent-bar-wrap {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.accent-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.accent-bar-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+}
+
+.accent-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.accent-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.accent-key {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+
+.accent-key:hover {
+  background: var(--surface-muted);
+  border-color: #b8b0a1;
+}
+
+.accent-key:active {
+  transform: scale(0.95);
+}
+
+/* ==================== Speaking Mode ==================== */
+.speaking-panel {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 240px;
+}
+
+.speaking-prompt-area {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.speaking-prompt-main {
+  font-size: clamp(36px, 6.5vw, 52px);
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.speaking-prompt-reading {
+  font-size: clamp(20px, 3.5vw, 26px);
+  font-weight: 600;
+  color: var(--right-bg);
+}
+
+.speaking-prompt-meaning {
+  font-size: 15px;
+  color: var(--ink-muted);
+}
+
+.speaking-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-record {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: var(--ink);
+  color: #ffffff;
+  padding: 14px 16px;
+}
+
+.btn-record:hover {
+  background: #33302b;
+}
+
+.btn-record.is-recording {
+  background: #a52e26;
+}
+
+.btn-record.is-recording:hover {
+  background: #8f261f;
+}
+
+.record-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #ff6b63;
+  display: inline-block;
+}
+
+.btn-record.is-recording .record-dot {
+  background: #ffffff;
+  animation: pulseDot 1s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.speaking-audio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.speaking-live-box {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #f8ecea;
+  border: 1px solid var(--wrong-border);
+  color: var(--wrong-ink);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.live-pulse {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #c7342a;
+  animation: pulseDot 0.9s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+.spelling-feedback.is-close {
+  background: #f5efe0;
+  border-color: #d9c89e;
+}
+
+.spelling-feedback.is-close .spelling-verdict {
+  color: #6b5218;
+}
+
+/* ==================== Deck Builder Modal ==================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 26, 23, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 760px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.builder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.builder-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.builder-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .builder-grid-2,
+  .builder-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.checkbox-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.check-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.builder-cards-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--surface-muted);
+}
+
+.builder-cards-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.builder-cards-head label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.builder-cards-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.bulk-paste-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bulk-help {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.bulk-paste-box textarea {
+  width: 100%;
+  padding: 9px 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.builder-card-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.builder-card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 0.8fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .builder-card-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.builder-card-row input {
+  width: 100%;
+  padding: 8px 9px;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--surface-muted);
+}
