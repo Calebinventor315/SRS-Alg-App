@@ -11,6 +11,13 @@ import { checkSpellingAnswer } from './pinyin.js';
 import { ACCENT_PALETTES, insertCharAtCursor } from './accents.js';
 import { exportDeckZip, importDeckFile } from './deckPackage.js';
 import { deleteDeckAudio } from './audioStore.js';
+import { extractUploadFile } from './fileExtractor.js';
+import {
+  checkServerAiStatus,
+  generateAiDeck,
+  getSavedOpenRouterKey,
+  saveOpenRouterKey
+} from './aiDeck.js';
 import {
   isMediaRecorderSupported,
   isSpeechRecognitionSupported,
@@ -54,6 +61,10 @@ let speakingResult = null; // null | { status, score, heard, target, isCorrect, 
 // Deck builder state
 let editingDeckId = null;
 
+// AI Deck Maker state
+let aiAttachments = []; // Array<{ id, name, kind, text, images }>
+let aiGeneratedDeck = null;
+
 // Undo stacks keyed by `${deckId}::${sectionId}::${direction}`
 const undoStacks = {};
 
@@ -84,11 +95,42 @@ const btnOfflineMode = document.getElementById('btn-offline-mode');
 const homeSyncBadge = document.getElementById('home-sync-badge');
 const homeUserEmail = document.getElementById('home-user-email');
 const btnHomeAuth = document.getElementById('btn-home-auth');
+const btnOpenAi = document.getElementById('btn-open-ai');
 const btnOpenBuilder = document.getElementById('btn-open-builder');
 const btnImportDeck = document.getElementById('btn-import-deck');
 const importFileInput = document.getElementById('import-file-input');
 const homeToast = document.getElementById('home-toast');
 const deckGrid = document.getElementById('deck-grid');
+
+// DOM — AI Deck Maker Modal
+const aiModal = document.getElementById('ai-modal');
+const btnCloseAi = document.getElementById('btn-close-ai');
+const btnCancelAi = document.getElementById('btn-cancel-ai');
+const aiForm = document.getElementById('ai-form');
+const aiDropzone = document.getElementById('ai-dropzone');
+const aiFileInput = document.getElementById('ai-file-input');
+const aiFileList = document.getElementById('ai-file-list');
+const aiPrompt = document.getElementById('ai-prompt');
+const aiLanguage = document.getElementById('ai-language');
+const aiModelFamily = document.getElementById('ai-model-family');
+const aiOptFlashcard = document.getElementById('ai-opt-flashcard');
+const aiOptSpelling = document.getElementById('ai-opt-spelling');
+const aiOptSpeaking = document.getElementById('ai-opt-speaking');
+const aiOptReverse = document.getElementById('ai-opt-reverse');
+const aiServerStatus = document.getElementById('ai-server-status');
+const aiKeyDetails = document.getElementById('ai-key-details');
+const aiOpenRouterKey = document.getElementById('ai-openrouter-key');
+const aiError = document.getElementById('ai-error');
+const aiProgress = document.getElementById('ai-progress');
+const aiPreview = document.getElementById('ai-preview');
+const aiPreviewTitle = document.getElementById('ai-preview-title');
+const aiPreviewMeta = document.getElementById('ai-preview-meta');
+const aiPreviewModel = document.getElementById('ai-preview-model');
+const aiPreviewCards = document.getElementById('ai-preview-cards');
+const btnAiExport = document.getElementById('btn-ai-export');
+const btnAiEdit = document.getElementById('btn-ai-edit');
+const btnAiSaveStudy = document.getElementById('btn-ai-save-study');
+const btnAiGenerate = document.getElementById('btn-ai-generate');
 
 // DOM — Study Topbar
 const btnBackHome = document.getElementById('btn-back-home');
@@ -760,6 +802,237 @@ importFileInput.addEventListener('change', async () => {
   } catch (err) {
     showHomeToast(err?.message || 'Could not import deck file.', true);
   }
+});
+
+/* ==================== AI DECK MAKER ==================== */
+
+function renderAiAttachments() {
+  if (!aiAttachments.length) {
+    aiFileList.classList.add('hidden');
+    aiFileList.innerHTML = '';
+    return;
+  }
+  aiFileList.classList.remove('hidden');
+  aiFileList.innerHTML = aiAttachments
+    .map((item) => {
+      const thumb = item.images && item.images[0]
+        ? `<img src="${item.images[0].dataUrl}" alt="" class="ai-file-thumb" />`
+        : `<span class="ai-file-kind">${escapeHtml(item.kind.toUpperCase())}</span>`;
+      const detail = item.images?.length
+        ? `${item.images.length} image${item.images.length > 1 ? 's' : ''}`
+        : `${item.text.length.toLocaleString()} chars`;
+      return `
+        <div class="ai-file-chip">
+          ${thumb}
+          <div class="ai-file-info">
+            <span class="ai-file-name">${escapeHtml(item.name)}</span>
+            <span class="ai-file-meta">${detail}</span>
+          </div>
+          <button type="button" class="btn btn-ghost btn-xs" data-remove-att="${escapeHtml(item.id)}" title="Remove">✕</button>
+        </div>
+      `;
+    })
+    .join('');
+
+  aiFileList.querySelectorAll('[data-remove-att]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      aiAttachments = aiAttachments.filter((a) => a.id !== btn.dataset.removeAtt);
+      renderAiAttachments();
+    });
+  });
+}
+
+async function handleAiFilesAdded(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  aiError.textContent = '';
+  aiProgress.textContent = `Reading ${files.length} file${files.length > 1 ? 's' : ''}…`;
+  aiProgress.classList.remove('hidden');
+
+  try {
+    for (const file of files) {
+      const extracted = await extractUploadFile(file);
+      aiAttachments.push({
+        id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        ...extracted
+      });
+    }
+    renderAiAttachments();
+  } catch (err) {
+    aiError.textContent = err?.message || 'Could not read one of the uploaded files.';
+  } finally {
+    aiProgress.classList.add('hidden');
+  }
+}
+
+async function openAiModal() {
+  aiError.textContent = '';
+  aiProgress.classList.add('hidden');
+  aiPreview.classList.add('hidden');
+  aiGeneratedDeck = null;
+  aiOpenRouterKey.value = getSavedOpenRouterKey();
+  aiModal.classList.remove('hidden');
+  renderAiAttachments();
+
+  const status = await checkServerAiStatus();
+  if (status.serverKeyConfigured) {
+    aiServerStatus.textContent = '✓ Server AI ready — free Chinese models (Qwen / DeepSeek / GLM) active';
+    aiServerStatus.classList.remove('hidden');
+    aiKeyDetails.open = false;
+  } else {
+    aiServerStatus.classList.add('hidden');
+    if (!aiOpenRouterKey.value) aiKeyDetails.open = true;
+  }
+}
+
+function closeAiModal() {
+  aiModal.classList.add('hidden');
+}
+
+btnOpenAi.addEventListener('click', openAiModal);
+btnCloseAi.addEventListener('click', closeAiModal);
+btnCancelAi.addEventListener('click', closeAiModal);
+
+aiDropzone.addEventListener('click', () => {
+  aiFileInput.value = '';
+  aiFileInput.click();
+});
+aiDropzone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    aiFileInput.value = '';
+    aiFileInput.click();
+  }
+});
+aiFileInput.addEventListener('change', () => handleAiFilesAdded(aiFileInput.files));
+
+aiDropzone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  aiDropzone.classList.add('is-dragover');
+});
+aiDropzone.addEventListener('dragleave', () => {
+  aiDropzone.classList.remove('is-dragover');
+});
+aiDropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  aiDropzone.classList.remove('is-dragover');
+  handleAiFilesAdded(e.dataTransfer?.files);
+});
+
+aiOpenRouterKey.addEventListener('change', () => {
+  saveOpenRouterKey(aiOpenRouterKey.value);
+});
+
+aiForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  aiError.textContent = '';
+  aiPreview.classList.add('hidden');
+  aiGeneratedDeck = null;
+
+  const prompt = aiPrompt.value.trim();
+  const extractedText = aiAttachments
+    .filter((a) => a.text)
+    .map((a) => `=== File: ${a.name} ===\n${a.text}`)
+    .join('\n\n');
+  const images = aiAttachments.flatMap((a) => a.images || []);
+
+  if (!prompt && !extractedText && !images.length) {
+    aiError.textContent = 'Enter a topic/instructions or upload at least one file.';
+    return;
+  }
+
+  const clientApiKey = aiOpenRouterKey.value.trim();
+  if (clientApiKey) saveOpenRouterKey(clientApiKey);
+
+  const enabledModes = {
+    flashcard: aiOptFlashcard.checked,
+    spelling: aiOptSpelling.checked,
+    speaking: aiOptSpeaking.checked,
+    reverse: aiOptReverse.checked
+  };
+
+  btnAiGenerate.disabled = true;
+  btnAiGenerate.textContent = 'Generating…';
+  aiProgress.textContent = images.length
+    ? 'Analyzing uploaded images & content with free Chinese AI…'
+    : 'Generating deck with free Chinese AI (Qwen / DeepSeek / GLM)…';
+  aiProgress.classList.remove('hidden');
+
+  try {
+    const { deck, modelUsed } = await generateAiDeck({
+      prompt,
+      language: aiLanguage.value,
+      enabledModes,
+      preferredFamily: aiModelFamily.value,
+      extractedText,
+      images,
+      clientApiKey
+    });
+
+    // Avoid colliding with built-in deck ID
+    if (deck.id === 'chinese-unit-4') {
+      deck.id = `${deck.id}-${Date.now().toString(36)}`;
+    }
+    aiGeneratedDeck = deck;
+
+    aiPreviewTitle.textContent = deck.title;
+    const secCount = Math.max(0, (deck.sections?.length || 1) - 1);
+    aiPreviewMeta.textContent = `${deck.cards.length} cards · ${deck.language}${
+      secCount ? ` · ${secCount} sections` : ''
+    }`;
+    aiPreviewModel.textContent = modelUsed;
+    aiPreviewCards.innerHTML = deck.cards
+      .slice(0, 12)
+      .map(
+        (c) => `
+          <div class="ai-preview-row">
+            <strong>${escapeHtml(c.front)}</strong>
+            <span>${escapeHtml(c.back)}</span>
+            ${c.meaning ? `<span class="ai-preview-meaning">${escapeHtml(c.meaning)}</span>` : ''}
+          </div>
+        `
+      )
+      .join('') +
+      (deck.cards.length > 12
+        ? `<div class="ai-preview-more">+ ${deck.cards.length - 12} more cards…</div>`
+        : '');
+
+    aiPreview.classList.remove('hidden');
+  } catch (err) {
+    aiError.textContent = err?.message || 'AI deck generation failed.';
+  } finally {
+    btnAiGenerate.disabled = false;
+    btnAiGenerate.textContent = '✨ Generate Deck';
+    aiProgress.classList.add('hidden');
+  }
+});
+
+btnAiSaveStudy.addEventListener('click', () => {
+  if (!aiGeneratedDeck) return;
+  if (!userData.customDecks) userData.customDecks = {};
+  userData.customDecks[aiGeneratedDeck.id] = aiGeneratedDeck;
+  setActiveSectionId(aiGeneratedDeck.id, 'all');
+  const idToOpen = aiGeneratedDeck.id;
+  aiAttachments = [];
+  aiPrompt.value = '';
+  aiGeneratedDeck = null;
+  persist();
+  closeAiModal();
+  openDeck(idToOpen);
+});
+
+btnAiEdit.addEventListener('click', () => {
+  if (!aiGeneratedDeck) return;
+  const draft = aiGeneratedDeck;
+  closeAiModal();
+  openDeckBuilder(draft);
+  editingDeckId = null; // Treat as new deck on save
+});
+
+btnAiExport.addEventListener('click', async () => {
+  if (!aiGeneratedDeck) return;
+  await exportDeckZip(aiGeneratedDeck);
+  showHomeToast(`Exported "${aiGeneratedDeck.title}" as ${aiGeneratedDeck.id}.srsl`);
 });
 
 /* ==================== CREATE / EDIT DECK BUILDER ==================== */
@@ -1562,6 +1835,10 @@ flashcardEl.addEventListener('touchend', () => {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+  if (!aiModal.classList.contains('hidden')) {
+    if (e.key === 'Escape') closeAiModal();
+    return;
+  }
   if (!builderModal.classList.contains('hidden')) {
     if (e.key === 'Escape') closeDeckBuilder();
     return;

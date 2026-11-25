@@ -1684,3 +1684,232 @@ input[type="range"]::-moz-range-thumb {
   padding-top: 10px;
   border-top: 1px solid var(--surface-muted);
 }
+
+/* ==================== AI Deck Maker ==================== */
+.btn-ai {
+  background: var(--right-bg);
+  color: #ffffff;
+}
+
+.btn-ai:hover:not(:disabled) {
+  background: var(--right-hover);
+}
+
+.modal-sub {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+
+.ai-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+
+.ai-dropzone:hover,
+.ai-dropzone.is-dragover {
+  border-color: var(--right-bg);
+  background: #edf4ef;
+}
+
+.ai-dropzone-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ai-dropzone-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.ai-file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  max-width: 100%;
+}
+
+.ai-file-thumb {
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+}
+
+.ai-file-kind {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: var(--surface-muted);
+  color: var(--ink-muted);
+}
+
+.ai-file-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ai-file-name {
+  font-size: 12px;
+  font-weight: 600;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-file-meta {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.ai-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  outline: none;
+}
+
+.ai-textarea:focus {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+
+.ai-status-pill {
+  font-size: 12px;
+  font-weight: 600;
+  color: #245238;
+  background: #e1efe6;
+  border: 1px solid #accbb7;
+  border-radius: var(--radius-sm);
+  padding: 8px 11px;
+}
+
+.ai-key-details {
+  font-size: 13px;
+  color: var(--ink-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+}
+
+.ai-key-details summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.ai-key-field {
+  margin-top: 10px;
+}
+
+.ai-key-field a {
+  color: var(--right-bg);
+}
+
+.ai-progress {
+  font-size: 13px;
+  font-weight: 500;
+  color: #5c4e32;
+  background: #f3ede0;
+  border: 1px solid #ddd1b8;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+}
+
+.ai-preview {
+  background: var(--bg);
+  border: 1px solid #accbb7;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ai-preview-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ai-preview-meta {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.ai-preview-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.ai-preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 9px;
+}
+
+.ai-preview-meaning {
+  color: var(--ink-muted);
+}
+
+.ai-preview-more {
+  font-size: 12px;
+  color: var(--ink-muted);
+  text-align: center;
+  padding: 4px;
+}
+
+.ai-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}

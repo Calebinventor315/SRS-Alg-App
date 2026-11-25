@@ -95,6 +95,7 @@
       </div>
 
       <div class="home-actions">
+        <button type="button" id="btn-open-ai" class="btn btn-ai">✨ AI Deck Maker</button>
         <button type="button" id="btn-open-builder" class="btn btn-primary">+ Create Deck</button>
         <button type="button" id="btn-import-deck" class="btn btn-ghost">Import .srsl</button>
         <input id="import-file-input" type="file" accept=".srsl,.zip,.json" class="hidden" />
@@ -387,6 +388,110 @@
         <div class="modal-footer">
           <button type="button" id="btn-cancel-builder" class="btn btn-ghost">Cancel</button>
           <button type="submit" id="btn-save-deck" class="btn btn-primary">Save Deck</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- AI Deck Maker Modal -->
+  <div id="ai-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="ai-modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="ai-modal-title" class="modal-title">✨ AI Deck Maker</h2>
+          <p class="modal-sub">Upload notes, photos, PDFs, Word/PowerPoint files, or type a topic — powered by free Chinese AI models (Qwen / DeepSeek / GLM).</p>
+        </div>
+        <button type="button" id="btn-close-ai" class="btn btn-ghost">✕</button>
+      </div>
+
+      <form id="ai-form" class="builder-form">
+        <div id="ai-dropzone" class="ai-dropzone" tabindex="0" role="button" aria-label="Upload any files">
+          <input id="ai-file-input" type="file" multiple class="hidden" />
+          <div class="ai-dropzone-title">Drop any files here or click to upload</div>
+          <div class="ai-dropzone-sub">Photos / screenshots, PDFs (including scanned), .docx, .pptx, .xlsx, .txt, .md, .csv, .json</div>
+        </div>
+
+        <div id="ai-file-list" class="ai-file-list hidden"></div>
+
+        <div class="field">
+          <label for="ai-prompt">Instructions or Topic</label>
+          <textarea
+            id="ai-prompt"
+            class="ai-textarea"
+            rows="3"
+            placeholder="e.g. Extract all vocabulary from these photos into Chinese pinyin, hanzi, and English grouped by section — or type any topic like '20 Chinese restaurant phrases'"
+          ></textarea>
+        </div>
+
+        <div class="builder-grid-2">
+          <div class="field">
+            <label for="ai-language">Target Language</label>
+            <select id="ai-language" class="deck-select">
+              <option value="auto">Auto-detect from prompt / files</option>
+              <option value="zh-CN">Chinese (zh-CN)</option>
+              <option value="es-ES">Spanish (es-ES)</option>
+              <option value="fr-FR">French (fr-FR)</option>
+              <option value="de-DE">German (de-DE)</option>
+              <option value="ja-JP">Japanese (ja-JP)</option>
+              <option value="ko-KR">Korean (ko-KR)</option>
+              <option value="pt-BR">Portuguese (pt-BR)</option>
+              <option value="it-IT">Italian (it-IT)</option>
+              <option value="en-US">English (en-US)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ai-model-family">Free AI Model Preference</label>
+            <select id="ai-model-family" class="deck-select">
+              <option value="auto">Auto · Best Free Chinese AI (Qwen / DeepSeek / GLM)</option>
+              <option value="qwen">Prefer Qwen (Alibaba)</option>
+              <option value="deepseek">Prefer DeepSeek</option>
+              <option value="glm">Prefer GLM (Zhipu)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Enabled Study Modes for Generated Deck</label>
+          <div class="checkbox-row">
+            <label class="check-pill"><input id="ai-opt-flashcard" type="checkbox" checked /> Flashcards</label>
+            <label class="check-pill"><input id="ai-opt-spelling" type="checkbox" checked /> Spelling</label>
+            <label class="check-pill"><input id="ai-opt-speaking" type="checkbox" checked /> Speaking</label>
+            <label class="check-pill"><input id="ai-opt-reverse" type="checkbox" checked /> Reverse</label>
+          </div>
+        </div>
+
+        <div id="ai-server-status" class="ai-status-pill hidden"></div>
+
+        <details id="ai-key-details" class="ai-key-details">
+          <summary>API Key Settings (optional if configured on Vercel)</summary>
+          <div class="field ai-key-field">
+            <label for="ai-openrouter-key">Free OpenRouter API Key (<a href="https://openrouter.ai/keys" target="_blank" rel="noopener">get free key</a> — no credit card required)</label>
+            <input id="ai-openrouter-key" type="password" placeholder="sk-or-v1-..." autocomplete="off" />
+          </div>
+        </details>
+
+        <div id="ai-error" class="auth-error"></div>
+        <div id="ai-progress" class="ai-progress hidden"></div>
+
+        <div id="ai-preview" class="ai-preview hidden">
+          <div class="ai-preview-head">
+            <div>
+              <h3 id="ai-preview-title" class="ai-preview-title"></h3>
+              <p id="ai-preview-meta" class="ai-preview-meta"></p>
+            </div>
+            <span id="ai-preview-model" class="lang-pill"></span>
+          </div>
+          <div id="ai-preview-cards" class="ai-preview-cards"></div>
+          <div class="ai-preview-actions">
+            <button type="button" id="btn-ai-export" class="btn btn-ghost btn-sm">Export .srsl</button>
+            <button type="button" id="btn-ai-edit" class="btn btn-ghost btn-sm">Edit in Builder</button>
+            <button type="button" id="btn-ai-save-study" class="btn btn-primary btn-sm">Save &amp; Study →</button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btn-cancel-ai" class="btn btn-ghost">Close</button>
+          <button type="submit" id="btn-ai-generate" class="btn btn-ai">✨ Generate Deck</button>
         </div>
       </form>
     </div>
